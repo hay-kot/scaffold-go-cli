@@ -1,3 +1,16 @@
+messages:
+  pre: |
+    # Go urfave/cli/v2 Project Scaffold
+
+    Generate boilerplate code for a new urfave/cli/v2 project.
+
+  post: |
+    # Get Started
+
+    ```sh
+    cd {{ .ProjectKebab }}
+    task run -- hello
+    ```
 skip:
   - "*.goreleaser.yaml"
   - "*taskfile.yml"
