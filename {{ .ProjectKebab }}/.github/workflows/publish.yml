@@ -1,4 +1,4 @@
-{{ if eq .Scaffold.ci_provide "github" }}
+{{ if eq .Scaffold.ci_provider "github" -}}
 name: Build and Publish
 
 permissions:

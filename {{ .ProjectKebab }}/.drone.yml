@@ -1,4 +1,4 @@
-{{ if eq .Scaffold.ci_provide "drone" }}
+{{ if eq .Scaffold.ci_provide "drone" -}}
 ---
 kind: pipeline
 type: docker
