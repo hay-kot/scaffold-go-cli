@@ -1,0 +1,37 @@
+{{ if eq .Scaffold.ci_provide "drone" }}
+---
+kind: pipeline
+type: docker
+name: default
+
+trigger:
+  event:
+    - tag
+
+steps:
+  - name: fetch
+    image: docker:git
+    commands:
+      - git fetch --tags
+
+  - name: snapshot
+    image: goreleaser/goreleaser
+    environment:
+      GITEA_TOKEN:
+        from_secret: GITEA_TOKEN
+    volumes:
+      - name: dist
+        path: /dist
+    commands:
+      - goreleaser release --clean
+
+  - name: publish docker image to gitea
+    image: plugins/docker
+    settings:
+      registry: gitea.example.com
+      username: gitea-username
+      password:
+        from_secret: GITEA_TOKEN
+      repo: gitea-username/{{ .ProjectKebab }}
+      tags: latest
+{{ end }}

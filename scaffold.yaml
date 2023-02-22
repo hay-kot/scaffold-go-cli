@@ -1,29 +1,30 @@
 skip:
   - "*.goreleaser.yaml"
+  - "*taskfile.yml"
 questions:
+  - name: "full_name"
+    prompt:
+      message: "Developer's full name"
+    required: true
   - name: "Description"
     prompt:
       message: "Description of the project"
     required: true
-  - name: "License"
+  - name: "open_source_license"
     prompt:
       message: "License of the project"
-      default: "MIT"
+      default: "MIT license"
       options:
-        - "MIT"
-        - "Apache-2.0"
-        - "GPL-3.0"
-        - "BSD-3-Clause"
-        - "Unlicense"
-  - name: "Colors"
+        - "MIT license"
+        - "BSD license"
+        - "ISC license"
+        - "Apache Software License 2.0"
+        - "GNU General Public License v3"
+  - name: "ci_provider"
     prompt:
-      multi: true
-      message: "Colors of the project"
+      message: "CI Provider"
+      default: "github"
       options:
-        - "red"
-        - "green"
-        - "blue"
-        - "yellow"
-  - name: "Use Github Actions"
-    prompt:
-      confirm: "Use Github Actions for CI/CD?"
+        - "github"
+        - "drone.io"
+        - "none"

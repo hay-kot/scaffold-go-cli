@@ -78,7 +78,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal().Err(err).Msg("failed to run scaffold")
+		log.Fatal().Err(err).Msg("failed to run {{ .Project }}")
 	}
 }
 
