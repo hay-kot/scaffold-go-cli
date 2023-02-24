@@ -8,6 +8,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
+
+	"{{ .Scaffold.gomod }}/app/commands"
 )
 
 var (
@@ -27,11 +29,11 @@ func build() string {
 }
 
 func main() {
-	ctrl := &controller{}
+	ctrl := &commands.Controller{}
 
 	app := &cli.App{
 		Name:    "{{ .Project }}",
-		Usage:   "{{ .Scaffold.Description }}",
+		Usage:   "{{ .Scaffold.description }}",
 		Version: build(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -48,10 +50,9 @@ func main() {
 		Before: func(ctx *cli.Context) error {
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-			ctrl.cwd = ctx.String("cwd")
-			ctrl.logLevel = ctx.String("log-level")
+			ctrl.WorkingDir = ctx.String("cwd")
 
-			switch ctrl.logLevel {
+			switch ctx.String("log-level") {
 			case "debug":
 				log.Level(zerolog.DebugLevel)
 			case "info":
@@ -80,14 +81,4 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal().Err(err).Msg("failed to run {{ .Project }}")
 	}
-}
-
-type controller struct {
-	cwd      string
-	logLevel string
-}
-
-func (c *controller) HelloWorld(ctx *cli.Context) error {
-	fmt.Println("Hello World!")
-	return nil
 }

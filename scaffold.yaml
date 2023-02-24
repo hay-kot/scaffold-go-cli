@@ -15,6 +15,9 @@ skip:
   - "*.goreleaser.yaml"
   - "*taskfile.yml"
 questions:
+  - name: "gomod"
+    prompt:
+      message: "Go Module Path"
   - name: "full_name"
     prompt:
       message: "Developer's full name"
