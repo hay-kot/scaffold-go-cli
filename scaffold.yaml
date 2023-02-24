@@ -22,7 +22,7 @@ questions:
     prompt:
       message: "Developer's full name"
     required: true
-  - name: "Description"
+  - name: "description"
     prompt:
       message: "Description of the project"
     required: true
