@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"os"
 
 	"github.com/rs/zerolog"
@@ -29,7 +28,9 @@ func build() string {
 }
 
 func main() {
-	ctrl := &commands.Controller{}
+	ctrl := &commands.Controller{
+		Flags: &commands.Flags{},
+	}
 
 	app := &cli.App{
 		Name:    "{{ .Project }}",
@@ -37,22 +38,22 @@ func main() {
 		Version: build(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "cwd",
-				Usage: "current working directory",
-				Value: ".",
+				Name:        "cwd",
+				Usage:       "current working directory",
+				Value:       ".",
+				Destination: &ctrl.Flags.WorkingDirectory,
 			},
 			&cli.StringFlag{
-				Name:  "log-level",
-				Usage: "log level (debug, info, warn, error, fatal, panic)",
-				Value: "panic",
+				Name:        "log-level",
+				Usage:       "log level (debug, info, warn, error, fatal, panic)",
+				Value:       "panic",
+				Destination: &ctrl.Flags.LogLevel,
 			},
 		},
 		Before: func(ctx *cli.Context) error {
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-			ctrl.WorkingDir = ctx.String("cwd")
-
-			switch ctx.String("log-level") {
+			switch ctrl.Flags.LogLevel {
 			case "debug":
 				log.Level(zerolog.DebugLevel)
 			case "info":

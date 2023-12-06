@@ -8,8 +8,7 @@ import (
 )
 
 type Controller struct {
-	WorkingDir string
-	LogLevel   string
+	Flags *Flags
 }
 
 func (c *Controller) HelloWorld(ctx *cli.Context) error {
