@@ -46,7 +46,7 @@ questions:
         - "Apache Software License 2.0"
         - "GNU General Public License v3"
   - name: "ci_provider"
-    group: "general"
+    group: "cli"
     prompt:
       message: "CI Provider"
       description: "Choose a CI provider for your project"
@@ -55,3 +55,20 @@ questions:
         - "github"
         - "drone.io"
         - "none"
+  - name: "commands"
+    group: "cli"
+    prompt:
+      message: "Commands"
+      description: "List of commands to generate (kebab case)"
+      loop: true
+
+presets:
+  test:
+    gomod: "github.com/username/project"
+    full_name: "John Doe"
+    description: "A new project"
+    open_source_license: "MIT license"
+    ci_provider: "github"
+    commands:
+      - "hello"
+      - "goodbye"
