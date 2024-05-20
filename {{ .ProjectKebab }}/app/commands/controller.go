@@ -7,11 +7,17 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+type Flags struct {
+	LogLevel         string
+}
+
 type Controller struct {
 	Flags *Flags
 }
 
-func (c *Controller) HelloWorld(ctx *cli.Context) error {
+{{ range .Scaffold.commands }}
+func (c *Controller) {{ . | titlecase | replace "-" "" }}(ctx *cli.Context) error {
 	fmt.Println("Hello World!")
 	return nil
 }
+{{ end }}

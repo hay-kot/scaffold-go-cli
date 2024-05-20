@@ -16,19 +16,28 @@ skip:
   - "*taskfile.yml"
 questions:
   - name: "gomod"
+    group: "general"
     prompt:
       message: "Go Module Path"
+      description: "e.g. github.com/username/project"
   - name: "full_name"
+    group: "general"
     prompt:
-      message: "Developer's full name"
+      message: "Developers Name"
+      description: "For License and README"
     required: true
   - name: "description"
+    group: "general"
     prompt:
-      message: "Description of the project"
+      message: "Description"
+      description: "A short description of the project"
+      multi: true
     required: true
   - name: "open_source_license"
+    group: "general"
     prompt:
-      message: "License of the project"
+      message: "License"
+      description: "Choose a license for your project"
       default: "MIT license"
       options:
         - "MIT license"
@@ -37,10 +46,30 @@ questions:
         - "Apache Software License 2.0"
         - "GNU General Public License v3"
   - name: "ci_provider"
+    group: "cli"
     prompt:
       message: "CI Provider"
+      description: "Choose a CI provider for your project"
       default: "github"
       options:
         - "github"
         - "drone.io"
         - "none"
+  - name: "commands"
+    group: "cli"
+    prompt:
+      message: "Commands"
+      description: "List of commands to generate (kebab case)"
+      loop: true
+
+presets:
+  test:
+    Project: "cli-test"
+    gomod: "github.com/username/project"
+    full_name: "John Doe"
+    description: "A new project"
+    open_source_license: "MIT license"
+    ci_provider: "github"
+    commands:
+      - "hello"
+      - "goodbye"

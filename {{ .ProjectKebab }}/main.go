@@ -32,17 +32,13 @@ func main() {
 		Flags: &commands.Flags{},
 	}
 
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
 	app := &cli.App{
 		Name:    "{{ .Project }}",
-		Usage:   "{{ .Scaffold.description }}",
+		Usage:   `{{ .Scaffold.description }}`,
 		Version: build(),
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:        "cwd",
-				Usage:       "current working directory",
-				Value:       ".",
-				Destination: &ctrl.Flags.WorkingDirectory,
-			},
 			&cli.StringFlag{
 				Name:        "log-level",
 				Usage:       "log level (debug, info, warn, error, fatal, panic)",
@@ -51,31 +47,22 @@ func main() {
 			},
 		},
 		Before: func(ctx *cli.Context) error {
-			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
-			switch ctrl.Flags.LogLevel {
-			case "debug":
-				log.Level(zerolog.DebugLevel)
-			case "info":
-				log.Level(zerolog.InfoLevel)
-			case "warn":
-				log.Level(zerolog.WarnLevel)
-			case "error":
-				log.Level(zerolog.ErrorLevel)
-			case "fatal":
-				log.Level(zerolog.FatalLevel)
-			default:
-				log.Level(zerolog.PanicLevel)
+			level, err := zerolog.ParseLevel(ctx.String("log-level"))
+			if err != nil {
+				return fmt.Errorf("failed to parse log level: %w", err)
 			}
+
+			log.Logger = log.Level(level)
 
 			return nil
 		},
 		Commands: []*cli.Command{
+      {{  range .Scaffold.commands -}}
 			{
-				Name:   "hello",
-				Usage:  "Says hello world",
-				Action: ctrl.HelloWorld,
-			},
+				Name:   "{{ kebabcase . }}",
+				Usage:  "",
+				Action: ctrl.{{ . | titlecase | replace "-" "" }},
+			},{{end }}
 		},
 	}
 
