@@ -64,6 +64,7 @@ questions:
 
 presets:
   test:
+    Project: "cli-test"
     gomod: "github.com/username/project"
     full_name: "John Doe"
     description: "A new project"

@@ -1,0 +1,31 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.22"
+
+      - name: Install scaffold
+        run: go install github.com/hay-kot/scaffold@latest
+
+      - name: Add Go bin to PATH
+        run: echo "${{ github.workspace }}/go/bin" >> $GITHUB_PATH
+
+      - name: Run snapshot tests
+        run: make test/snapshot
+
+      - name: Run regular tests
+        run: make test/run
