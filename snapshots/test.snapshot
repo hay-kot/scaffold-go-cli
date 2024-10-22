@@ -3,37 +3,37 @@ cli-test:  (type=dir)
 		workflows:  (type=dir)
 			partial-tests.yml:  (type=file)
 				name: Go Build/Test
-
+				
 				on:
 				  workflow_call:
-
+				
 				jobs:
 				  Go:
 				    runs-on: ubuntu-latest
 				    steps:
 				      - uses: actions/checkout@v3
-
+				
 				      - name: Set up Go
 				        uses: actions/setup-go@v3
 				        with:
 				          go-version: 1.19
-
+				
 				      - name: golangci-lint
 				        uses: golangci/golangci-lint-action@v3
 				        with:
 				          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
 				          version: latest
 				          args: --timeout=6m
-
+				
 				      - name: Build
 				        run: go build ./...
-
+				
 				      - name: Test
 				        run: go test ./... -race
-
+				
 			pr.yml:  (type=file)
 				name: pr
-
+				
 				on:
 				  push:
 				    branches:
@@ -41,28 +41,28 @@ cli-test:  (type=dir)
 				  pull_request:
 				    branches:
 				      - main
-
+				
 				jobs:
 				  backend-tests:
 				    name: "Go Build/Test"
 				    uses: ./.github/workflows/partial-tests.yml
-
+				
 			publish.yml:  (type=file)
 				name: Build and Publish
-
+				
 				permissions:
 				  contents: write
-
+				
 				on:
 				  push:
 				    tags:
 				      - "*"
-
+				
 				jobs:
 				  backend-tests:
 				    name: "Go Build/Test"
 				    uses: ./.github/workflows/partial-tests.yml
-
+				
 				  goreleaser:
 				    name: "Release"
 				    needs:
@@ -84,7 +84,7 @@ cli-test:  (type=dir)
 				          args: release --rm-dist
 				        env:
 				          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+				
 	.gitignore:  (type=file)
 		# If you prefer the allow list template instead of the deny list, see community template:
 		# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
@@ -95,16 +95,16 @@ cli-test:  (type=dir)
 		*.dll
 		*.so
 		*.dylib
-
+		
 		# Test binary, built with `go test -c`
 		*.test
-
+		
 		# Output of the go coverage tool, specifically when used with LiteIDE
 		*.out
-
+		
 		# Dependency directories (remove the comment below to include it)
 		# vendor/
-
+		
 		# Go workspace file
 		go.work
 	.golanci.yml:  (type=file)
@@ -193,7 +193,7 @@ cli-test:  (type=dir)
 		      - linux
 		      - windows
 		      - darwin
-
+		
 		archives:
 		  - format: tar.gz
 		    # this name template makes the OS and Arch compatible with the results of uname.
@@ -222,22 +222,22 @@ cli-test:  (type=dir)
 		# Feel free to remove those if you don't want/use them.
 		# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 		# vim: set ts=2 sw=2 tw=0 fo=cnqoj
-
+		
 	LICENSE:  (type=file)
 		MIT License
-
+		
 		Copyright (c) 2024-10-22, John Doe
-
+		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
 		in the Software without restriction, including without limitation the rights
 		to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 		copies of the Software, and to permit persons to whom the Software is
 		furnished to do so, subject to the following conditions:
-
+		
 		The above copyright notice and this permission notice shall be included in all
 		copies or substantial portions of the Software.
-
+		
 		THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 		IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 		FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -245,33 +245,33 @@ cli-test:  (type=dir)
 		LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 		OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 		SOFTWARE.
-
+		
 	README.md:  (type=file)
 		# cli-test
-
+		
 		A new project
-
+		
 		## Installation
-
+		
 		```bash
 		go install https://github.com/username/project
 		```
-
+		
 		## Usage
-
+		
 		TODO
-
-
+		
+		
 	go.mod:  (type=file)
 		module github.com/username/project
-
+		
 		go 1.22
-
+		
 		require (
 			github.com/rs/zerolog v1.31.0
 			github.com/urfave/cli/v2 v2.26.0
 		)
-
+		
 		require (
 			github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
 			github.com/mattn/go-colorable v0.1.13 // indirect
@@ -280,7 +280,7 @@ cli-test:  (type=dir)
 			github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 			golang.org/x/sys v0.15.0 // indirect
 		)
-
+		
 	go.sum:  (type=file)
 		github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 		github.com/cpuguy83/go-md2man/v2 v2.0.3 h1:qMCsGGgs+MAzDFyp9LpAe1Lqy/fY/qCovCm0qnXZOBM=
@@ -307,76 +307,76 @@ cli-test:  (type=dir)
 		golang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 		golang.org/x/sys v0.15.0 h1:h48lPFYpsTvQJZF4EKyI4aLHaev3CxivZmv7yZig9pc=
 		golang.org/x/sys v0.15.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
-
+		
 	internal:  (type=dir)
 		commands:  (type=dir)
 			controller.go:  (type=file)
 				// Package commands contains the CLI commands for the application
 				package commands
-
+				
 				import (
 					"fmt"
-
+				
 					"context"
 				)
-
+				
 				type Flags struct {
 					LogLevel         string
 				}
-
+				
 				type Controller struct {
 					Flags *Flags
 				}
-
-
+				
+				
 				func (c *Controller) Hello(ctx context.Context) error {
 					fmt.Println("Hello World!")
 					return nil
 				}
-
+				
 				func (c *Controller) Goodbye(ctx context.Context) error {
 					fmt.Println("Hello World!")
 					return nil
 				}
-
-
+				
+				
 	main.go:  (type=file)
 		package main
-
+		
 		import (
 			"fmt"
 			"os"
-
+		
 			"github.com/rs/zerolog"
 			"github.com/rs/zerolog/log"
 			"github.com/urfave/cli/v2"
-
+		
 			"github.com/username/project/internal/commands"
 		)
-
+		
 		var (
 			// Build information. Populated at build-time via -ldflags flag.
 			version = "dev"
 			commit  = "HEAD"
 			date    = "now"
 		)
-
+		
 		func build() string {
 			short := commit
 			if len(commit) > 7 {
 				short = commit[:7]
 			}
-
+		
 			return fmt.Sprintf("%s (%s) %s", version, short, date)
 		}
-
+		
 		func main() {
 			ctrl := &commands.Controller{
 				Flags: &commands.Flags{},
 			}
-
+		
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
+		
 			app := &cli.App{
 				Name:    "cli-test",
 				Usage:   `A new project`,
@@ -393,9 +393,9 @@ cli-test:  (type=dir)
 					if err != nil {
 						return fmt.Errorf("failed to parse log level: %w", err)
 					}
-
+		
 					log.Logger = log.Level(level)
-
+		
 					return nil
 				},
 				Commands: []*cli.Command{
@@ -414,61 +414,61 @@ cli-test:  (type=dir)
 					},
 				},
 			}
-
+		
 			if err := app.Run(os.Args); err != nil {
 				log.Fatal().Err(err).Msg("failed to run cli-test")
 			}
 		}
-
+		
 	taskfile.yml:  (type=file)
 		version: "3"
-
+		
 		env:
 		  LOG_LEVEL: "debug"
-
+		
 		tasks:
 		  run:
 		    desc: Runs the main application and supports passing CLI args
 		    cmds:
 		      - go run *.go {{ .CLI_ARGS }}
 		    silent: false
-
+		
 		  build:
 		    desc: Builds the backend binary
 		    cmds:
 		      - goreleaser build --snapshot --rm-dist
-
+		
 		  test:
 		    desc: Runs all go tests using gotestsum - supports passing gotestsum args
 		    cmds:
 		      - gotestsum {{ .CLI_ARGS }} ./...
-
+		
 		  test:watch:
 		    desc: Runs all go tests using gotestsum in watch mode
 		    cmds:
 		      - gotestsum --watch -- -v ./...
-
+		
 		  coverage:
 		    desc: Runs all go tests with -race flag and generates a coverage report
 		    cmds:
 		      - go test -race -coverprofile=coverage.out -covermode=atomic ./... -v -cover
 		    silent: true
-
+		
 		  tidy:
 		    desc: Runs go mod tidy on the backend
 		    cmds:
 		      - go mod tidy
-
+		
 		  lint:
 		    desc: Runs golangci-lint
 		    cmds:
 		      - golangci-lint run ./...
-
+		
 		  pr:
 		    desc: Runs all go test and lint related tasks for PRs
 		    cmds:
 		      - task: tidy
 		      - task: lint
 		      - task: test
-
+		
 
