@@ -226,7 +226,7 @@ cli-test:  (type=dir)
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2024-05-20, John Doe
+		Copyright (c) 2024-10-22, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -262,38 +262,6 @@ cli-test:  (type=dir)
 		TODO
 		
 		
-	app:  (type=dir)
-		commands:  (type=dir)
-			controller.go:  (type=file)
-				// Package commands contains the CLI commands for the application
-				package commands
-				
-				import (
-					"fmt"
-				
-					"github.com/urfave/cli/v2"
-				)
-				
-				type Flags struct {
-					LogLevel         string
-				}
-				
-				type Controller struct {
-					Flags *Flags
-				}
-				
-				
-				func (c *Controller) Hello(ctx *cli.Context) error {
-					fmt.Println("Hello World!")
-					return nil
-				}
-				
-				func (c *Controller) Goodbye(ctx *cli.Context) error {
-					fmt.Println("Hello World!")
-					return nil
-				}
-				
-				
 	go.mod:  (type=file)
 		module github.com/username/project
 		
@@ -340,6 +308,38 @@ cli-test:  (type=dir)
 		golang.org/x/sys v0.15.0 h1:h48lPFYpsTvQJZF4EKyI4aLHaev3CxivZmv7yZig9pc=
 		golang.org/x/sys v0.15.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
 		
+	internal:  (type=dir)
+		commands:  (type=dir)
+			controller.go:  (type=file)
+				// Package commands contains the CLI commands for the application
+				package commands
+				
+				import (
+					"fmt"
+				
+					"context"
+				)
+				
+				type Flags struct {
+					LogLevel         string
+				}
+				
+				type Controller struct {
+					Flags *Flags
+				}
+				
+				
+				func (c *Controller) Hello(ctx context.Context) error {
+					fmt.Println("Hello World!")
+					return nil
+				}
+				
+				func (c *Controller) Goodbye(ctx context.Context) error {
+					fmt.Println("Hello World!")
+					return nil
+				}
+				
+				
 	main.go:  (type=file)
 		package main
 		
@@ -351,7 +351,7 @@ cli-test:  (type=dir)
 			"github.com/rs/zerolog/log"
 			"github.com/urfave/cli/v2"
 		
-			"github.com/username/project/app/commands"
+			"github.com/username/project/internal/commands"
 		)
 		
 		var (
@@ -386,7 +386,6 @@ cli-test:  (type=dir)
 						Name:        "log-level",
 						Usage:       "log level (debug, info, warn, error, fatal, panic)",
 						Value:       "panic",
-						Destination: &ctrl.Flags.LogLevel,
 					},
 				},
 				Before: func(ctx *cli.Context) error {
@@ -403,11 +402,15 @@ cli-test:  (type=dir)
 		      {
 						Name:   "hello",
 						Usage:  "",
-						Action: ctrl.Hello,
+						Action: func(ctx *cli.Context) error {
+							return ctrl.Hello(ctx.Context)
+						},
 					},{
 						Name:   "goodbye",
 						Usage:  "",
-						Action: ctrl.Goodbye,
+						Action: func(ctx *cli.Context) error {
+							return ctrl.Goodbye(ctx.Context)
+						},
 					},
 				},
 			}

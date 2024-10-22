@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 
-	"{{ .Scaffold.gomod }}/app/commands"
+	"{{ .Scaffold.gomod }}/internal/commands"
 )
 
 var (
@@ -43,7 +43,6 @@ func main() {
 				Name:        "log-level",
 				Usage:       "log level (debug, info, warn, error, fatal, panic)",
 				Value:       "panic",
-				Destination: &ctrl.Flags.LogLevel,
 			},
 		},
 		Before: func(ctx *cli.Context) error {
@@ -59,9 +58,11 @@ func main() {
 		Commands: []*cli.Command{
       {{  range .Scaffold.commands -}}
 			{
-				Name:   "{{ kebabcase . }}",
+				Name:   "{{ toKebabCase . }}",
 				Usage:  "",
-				Action: ctrl.{{ . | titlecase | replace "-" "" }},
+				Action: func(ctx *cli.Context) error {
+					return ctrl.{{ . | toTitleCase | replace "-" "" }}(ctx.Context)
+				},
 			},{{end }}
 		},
 	}
