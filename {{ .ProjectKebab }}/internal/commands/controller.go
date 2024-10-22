@@ -4,7 +4,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/urfave/cli/v2"
+	"context"
 )
 
 type Flags struct {
@@ -16,7 +16,7 @@ type Controller struct {
 }
 
 {{ range .Scaffold.commands }}
-func (c *Controller) {{ . | titlecase | replace "-" "" }}(ctx *cli.Context) error {
+func (c *Controller) {{ . | toTitleCase | replace "-" "" }}(ctx context.Context) error {
 	fmt.Println("Hello World!")
 	return nil
 }
