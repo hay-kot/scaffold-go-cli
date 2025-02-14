@@ -61,7 +61,7 @@ questions:
         regex: "^[a-z]+(-[a-z]+)*$"
         message: "inputs must be in kebab-case"
 
-  - name: "use_gh_actions"
+  - name: "feature_gh_actions"
     group: "features"
     prompt:
       confirm: "Github Actions"
@@ -79,6 +79,18 @@ questions:
       confirm: "Publish Homebrew Tap"
       default: true
       description: "Do you want to publish a homebrew tap?"
+  - name: "feature_renovate"
+    group: "features"
+    prompt:
+      confirm: "Enable Renovate?"
+      description: "Automatically update dependencies, via Renovate"
+      default: true
+  - name: "feature_release_drafter"
+    group: "features"
+    prompt:
+      confirm: "Enable Release Draft"
+      description: "Automatically draft release notes, via Release Drafter"
+      default: true
 
   - name: "docker_registry_url"
     group: "docker"
@@ -122,7 +134,8 @@ presets:
     full_name: "John Doe"
     description: "A new project"
     open_source_license: "MIT license"
-    use_gh_actions: true
+    feature_gh_actions: true
+    feature_renovate: true
     feature_docker: true
     docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
     feature_homebrew_tap: true
@@ -131,3 +144,14 @@ presets:
     commands:
       - "hello"
       - "goodbye"
+
+features:
+  - value: "{{ .Scaffold.enable_renovate }}"
+    globs:
+      - "**/renovate.json"
+  - value: "{{ .Scaffold.enable_release_drafter }}"
+    globs:
+      - "**/*release-drafter.yml"
+  - value: "{{ .Scaffold.feature_gh_actions }}"
+    globs:
+      - "**/workflows/**.yml"
