@@ -14,7 +14,7 @@ test/snapshot/update:
 test/run:
 	rm -rf /tmp/scaffold-test/
 	# render output
-	scaffold new --output-dir="/tmp/scaffold-test/" --preset="test" --no-prompt ./
+	scaffold --log-level="debug" new --output-dir="/tmp/scaffold-test/" --preset="test" --no-prompt ./
 
 	ls /tmp/scaffold-test/cli-test/
 
