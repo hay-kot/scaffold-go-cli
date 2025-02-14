@@ -1,4 +1,4 @@
-{{ if eq .Scaffold.ci_provider "github" -}}
+{{ if .Scaffold.use_gh_actions -}}
 name: pr
 
 on:
