@@ -51,15 +51,15 @@ changelog:
 brews:
   - repository:
       owner: "[[ .Scaffold.homebrew_owner ]]"
-      name: "[[ .Scaffold.homebrew_tap ]]"
+      name: "[[ .Scaffold.homebrew_name ]]"
     description: "[[ .Scaffold.description ]]"
-    license: "[[ .Scaffold.license ]]"
+    license: "[[ .Scaffold.open_source_license ]]"
     dependencies:
       - name: go
         type: optional
       - name: git
     test: |
-      system "#{bin}/scaffold version"
+      system "#{bin}/[[ .Scaffold.gomod | pathBase ]] version"
 [[ end ]]
 
 [[ if .Scaffold.feature_docker ]]
