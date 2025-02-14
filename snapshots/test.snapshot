@@ -214,7 +214,6 @@ cli-test:  (type=dir)
 				      - name: Test
 				        run: go test ./... -race
 				
-				
 			pr.yml:  (type=file)
 				name: pr
 				
@@ -230,7 +229,6 @@ cli-test:  (type=dir)
 				  backend-tests:
 				    name: "Go Build/Test"
 				    uses: ./.github/workflows/partial-tests.yml
-				
 				
 			publish.yml:  (type=file)
 				name: Build and Publish
@@ -292,7 +290,7 @@ cli-test:  (type=dir)
 				      - run: git fetch --force --tags
 				      - uses: actions/setup-go@v5
 				        with:
-				          go-version-file: 'go.mod'
+				          go-version-file: "go.mod"
 				          cache: true
 				      - uses: goreleaser/goreleaser-action@v6
 				        with:
@@ -301,7 +299,6 @@ cli-test:  (type=dir)
 				          args: release --rm-dist
 				        env:
 				          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-				
 				
 			release-drafter.yml:  (type=file)
 				name: Release Drafter
@@ -497,13 +494,13 @@ cli-test:  (type=dir)
 		      owner: "hay-kot"
 		      name: "homebrew-scaffold-go-cli-tap"
 		    description: "A new project"
-		    license: "<no value>"
+		    license: "MIT license"
 		    dependencies:
 		      - name: go
 		        type: optional
 		      - name: git
 		    test: |
-		      system "#{bin}/scaffold version"
+		      system "#{bin}/project version"
 		
 		
 		
@@ -779,6 +776,16 @@ cli-test:  (type=dir)
 			}
 		}
 		
+	renovate.json:  (type=file)
+		{
+		    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+		    "extends": [
+		        "config:base"
+		    ],
+		    "postUpdateOptions": [
+		        "gomodTidy"
+		    ]
+		}
 	taskfile.yml:  (type=file)
 		version: "3"
 		

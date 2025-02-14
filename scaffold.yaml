@@ -137,19 +137,20 @@ presets:
     feature_gh_actions: true
     feature_renovate: true
     feature_docker: true
+    feature_release_drafter: true
     docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
     feature_homebrew_tap: true
     homebrew_owner: "hay-kot"
-    homebrew_tap: "homebrew-scaffold-go-cli-tap"
+    homebrew_name: "homebrew-scaffold-go-cli-tap"
     commands:
       - "hello"
       - "goodbye"
 
 features:
-  - value: "{{ .Scaffold.enable_renovate }}"
+  - value: "{{ .Scaffold.feature_renovate }}"
     globs:
       - "**/renovate.json"
-  - value: "{{ .Scaffold.enable_release_drafter }}"
+  - value: "{{ .Scaffold.feature_release_drafter }}"
     globs:
       - "**/*release-drafter.yml"
   - value: "{{ .Scaffold.feature_gh_actions }}"
