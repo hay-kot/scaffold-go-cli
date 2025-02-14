@@ -16,7 +16,8 @@ cli-test:  (type=dir)
 				      - name: Set up Go
 				        uses: actions/setup-go@v3
 				        with:
-				          go-version: 1.19
+				          go-version-file: 'go.mod'
+				          cache: true
 				
 				      - name: golangci-lint
 				        uses: golangci/golangci-lint-action@v3
@@ -30,6 +31,7 @@ cli-test:  (type=dir)
 				
 				      - name: Test
 				        run: go test ./... -race
+				
 				
 			pr.yml:  (type=file)
 				name: pr
@@ -46,6 +48,7 @@ cli-test:  (type=dir)
 				  backend-tests:
 				    name: "Go Build/Test"
 				    uses: ./.github/workflows/partial-tests.yml
+				
 				
 			publish.yml:  (type=file)
 				name: Build and Publish
@@ -75,7 +78,7 @@ cli-test:  (type=dir)
 				      - run: git fetch --force --tags
 				      - uses: actions/setup-go@v3
 				        with:
-				          go-version: ">=1.19.3"
+				          go-version-file: 'go.mod'
 				          cache: true
 				      - uses: goreleaser/goreleaser-action@v3
 				        with:
@@ -84,6 +87,7 @@ cli-test:  (type=dir)
 				          args: release --rm-dist
 				        env:
 				          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+				
 				
 	.gitignore:  (type=file)
 		# If you prefer the allow list template instead of the deny list, see community template:
@@ -155,7 +159,6 @@ cli-test:  (type=dir)
 		    - errcheck
 		    - errorlint
 		    - exhaustive
-		    - exportloopref
 		    - gochecknoinits
 		    - goconst
 		    - gocritic
@@ -180,12 +183,15 @@ cli-test:  (type=dir)
 		issues:
 		  exclude-use-default: false
 		  fix: true
+		
 	.goreleaser.yaml:  (type=file)
 		# This is an example .goreleaser.yml file with some sensible defaults.
 		# Make sure to check the documentation at https://goreleaser.com
+		version: 2
 		before:
 		  hooks:
 		    - go mod tidy
+		
 		builds:
 		  - env:
 		      - CGO_ENABLED=0
@@ -193,9 +199,15 @@ cli-test:  (type=dir)
 		      - linux
 		      - windows
 		      - darwin
+		    goarch:
+		      - amd64
+		      - arm
+		      - arm64
+		    goarm:
+		      - "7"
 		
 		archives:
-		  - format: tar.gz
+		  - formats: [tar.gz]
 		    # this name template makes the OS and Arch compatible with the results of uname.
 		    name_template: >-
 		      {{ .ProjectName }}_
@@ -207,26 +219,112 @@ cli-test:  (type=dir)
 		    # use zip for windows archives
 		    format_overrides:
 		      - goos: windows
-		        format: zip
+		        formats: [zip]
+		
 		checksum:
 		  name_template: "checksums.txt"
+		
 		snapshot:
-		  name_template: "{{ incpatch .Version }}-next"
+		  version_template: "{{ incpatch .Version }}-next"
+		
 		changelog:
 		  sort: asc
 		  filters:
 		    exclude:
 		      - "^docs:"
 		      - "^test:"
+		
+		
+		brews:
+		  - repository:
+		      owner: "hay-kot"
+		      name: "homebrew-scaffold-go-cli-tap"
+		    description: "A new project"
+		    license: "<no value>"
+		    dependencies:
+		      - name: go
+		        type: optional
+		      - name: git
+		    test: |
+		      system "#{bin}/scaffold version"
+		
+		
+		
+		dockers:
+		  - use: buildx
+		    goos: linux
+		    goarch: arm
+		    goarm: 7
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-armv7"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-armv7"
+		    build_flag_templates:
+		      - "--platform=linux/arm/v7"
+		      - "--pull"
+		      - "--label=org.opencontainers.image.created={{.Date}}"
+		      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+		      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+		      - "--label=org.opencontainers.image.version=v{{.Version}}"
+		
+		  - use: buildx
+		    goos: linux
+		    goarch: arm64
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-arm64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-arm64"
+		    build_flag_templates:
+		      - "--platform=linux/arm64"
+		      - "--pull"
+		      - "--label=org.opencontainers.image.created={{.Date}}"
+		      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+		      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+		      - "--label=org.opencontainers.image.version=v{{.Version}}"
+		
+		  - use: buildx
+		    goos: linux
+		    goarch: amd64
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-amd64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-amd64"
+		    build_flag_templates:
+		      - "--platform=linux/amd64"
+		      - "--pull"
+		      - "--label=org.opencontainers.image.created={{.Date}}"
+		      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+		      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+		      - "--label=org.opencontainers.image.version=v{{.Version}}"
+		
+		docker_manifests:
+		  - name_template: "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}"
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-amd64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-arm64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-armv7"
+		  - name_template: "ghcr.io/hay-kot/scaffold-go-cli:latest"
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-amd64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-arm64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-armv7"
+		
+		
+		#
+		#--------------------------------------------------------------------------------------------------
+		# Meta
+		#
 		# The lines beneath this are called `modelines`. See `:help modeline`
 		# Feel free to remove those if you don't want/use them.
 		# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 		# vim: set ts=2 sw=2 tw=0 fo=cnqoj
 		
+	Dockerfile:  (type=file)
+		FROM gcr.io/distroless/static
+		ENTRYPOINT ["project"]
+		COPY project /
+		
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2024-10-22, John Doe
+		Copyright (c) 2025-02-14, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -254,59 +352,58 @@ cli-test:  (type=dir)
 		## Installation
 		
 		```bash
-		go install https://github.com/username/project
+		go install github.com/username/project
 		```
 		
 		## Usage
 		
 		TODO
 		
-		
 	go.mod:  (type=file)
 		module github.com/username/project
 		
-		go 1.22
+		go 1.24
 		
 		require (
-			github.com/rs/zerolog v1.31.0
-			github.com/urfave/cli/v2 v2.26.0
+			github.com/rs/zerolog v1.33.0
+			github.com/urfave/cli/v3 v3.0.0-beta1
 		)
 		
 		require (
-			github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
-			github.com/mattn/go-colorable v0.1.13 // indirect
+			github.com/mattn/go-colorable v0.1.14 // indirect
 			github.com/mattn/go-isatty v0.0.20 // indirect
-			github.com/russross/blackfriday/v2 v2.1.0 // indirect
-			github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-			golang.org/x/sys v0.15.0 // indirect
+			golang.org/x/sys v0.30.0 // indirect
 		)
 		
 	go.sum:  (type=file)
 		github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
-		github.com/cpuguy83/go-md2man/v2 v2.0.3 h1:qMCsGGgs+MAzDFyp9LpAe1Lqy/fY/qCovCm0qnXZOBM=
-		github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
+		github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
+		github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 		github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
-		github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
 		github.com/mattn/go-colorable v0.1.13/go.mod h1:7S9/ev0klgBDR4GtXTXX8a3vIGJpMovkB8vQcUbaXHg=
+		github.com/mattn/go-colorable v0.1.14 h1:9A9LHSqF/7dyVVX6g0U9cwm9pG3kP9gSzcuIPHPsaIE=
+		github.com/mattn/go-colorable v0.1.14/go.mod h1:6LmQG8QLFO4G5z1gPvYEzlUgJ2wF+stgPZH1UqBm1s8=
 		github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 		github.com/mattn/go-isatty v0.0.19/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 		github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 		github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 		github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+		github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+		github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 		github.com/rs/xid v1.5.0/go.mod h1:trrq9SKmegXys3aeAKXMUTdJsYXVwGY3RLcfgqegfbg=
-		github.com/rs/zerolog v1.31.0 h1:FcTR3NnLWW+NnTwwhFWiJSZr4ECLpqCm6QsEnyvbV4A=
-		github.com/rs/zerolog v1.31.0/go.mod h1:/7mN4D5sKwJLZQ2b/znpjC3/GQWY/xaDXUM0kKWRHss=
-		github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf35Ld67mk=
-		github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
-		github.com/urfave/cli/v2 v2.26.0 h1:3f3AMg3HpThFNT4I++TKOejZO8yU55t3JnnSr4S4QEI=
-		github.com/urfave/cli/v2 v2.26.0/go.mod h1:8qnjx1vcq5s2/wpsqoZFndg2CE5tNFyrTvS6SinrnYQ=
-		github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 h1:bAn7/zixMGCfxrRTfdpNzjtPYqr8smhKouy9mxVdGPU=
-		github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
+		github.com/rs/zerolog v1.33.0 h1:1cU2KZkvPxNyfgEmhHAz/1A9Bz+llsdYzklWFzgp0r8=
+		github.com/rs/zerolog v1.33.0/go.mod h1:/7mN4D5sKwJLZQ2b/znpjC3/GQWY/xaDXUM0kKWRHss=
+		github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
+		github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+		github.com/urfave/cli/v3 v3.0.0-beta1 h1:6DTaaUarcM0wX7qj5Hcvs+5Dm3dyUTBbEwIWAjcw9Zg=
+		github.com/urfave/cli/v3 v3.0.0-beta1/go.mod h1:FnIeEMYu+ko8zP1F9Ypr3xkZMIDqW3DR92yUtY39q1Y=
 		golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 		golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 		golang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-		golang.org/x/sys v0.15.0 h1:h48lPFYpsTvQJZF4EKyI4aLHaev3CxivZmv7yZig9pc=
-		golang.org/x/sys v0.15.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+		golang.org/x/sys v0.30.0 h1:QjkSwP/36a20jFYWkSue1YwXzLmsV5Gfq7Eiy72C1uc=
+		golang.org/x/sys v0.30.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+		gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+		gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 		
 	internal:  (type=dir)
 		commands:  (type=dir)
@@ -344,12 +441,13 @@ cli-test:  (type=dir)
 		package main
 		
 		import (
+			"context"
 			"fmt"
 			"os"
 		
 			"github.com/rs/zerolog"
 			"github.com/rs/zerolog/log"
-			"github.com/urfave/cli/v2"
+			"github.com/urfave/cli/v3"
 		
 			"github.com/username/project/internal/commands"
 		)
@@ -377,7 +475,7 @@ cli-test:  (type=dir)
 		
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		
-			app := &cli.App{
+			app := &cli.Command{
 				Name:    "cli-test",
 				Usage:   `A new project`,
 				Version: build(),
@@ -385,37 +483,41 @@ cli-test:  (type=dir)
 					&cli.StringFlag{
 						Name:        "log-level",
 						Usage:       "log level (debug, info, warn, error, fatal, panic)",
+						Sources: cli.EnvVars("LOG_FORMAT"),
 						Value:       "panic",
 					},
 				},
-				Before: func(ctx *cli.Context) error {
-					level, err := zerolog.ParseLevel(ctx.String("log-level"))
+				Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
+					level, err := zerolog.ParseLevel(c.String("log-level"))
 					if err != nil {
-						return fmt.Errorf("failed to parse log level: %w", err)
+						return ctx, fmt.Errorf("failed to parse log level: %w", err)
 					}
 		
 					log.Logger = log.Level(level)
 		
-					return nil
+					return ctx, nil
 				},
 				Commands: []*cli.Command{
-		      {
+					{
 						Name:   "hello",
 						Usage:  "",
-						Action: func(ctx *cli.Context) error {
-							return ctrl.Hello(ctx.Context)
+						Action: func(ctx context.Context, c *cli.Command) error {
+							return ctrl.Hello(ctx)
 						},
-					},{
+					},
+					{
 						Name:   "goodbye",
 						Usage:  "",
-						Action: func(ctx *cli.Context) error {
-							return ctrl.Goodbye(ctx.Context)
+						Action: func(ctx context.Context, c *cli.Command) error {
+							return ctrl.Goodbye(ctx)
 						},
 					},
 				},
 			}
 		
-			if err := app.Run(os.Args); err != nil {
+			ctx := context.Background()
+		
+			if err := app.Run(ctx, os.Args); err != nil {
 				log.Fatal().Err(err).Msg("failed to run cli-test")
 			}
 		}
@@ -436,7 +538,7 @@ cli-test:  (type=dir)
 		  build:
 		    desc: Builds the backend binary
 		    cmds:
-		      - goreleaser build --snapshot --rm-dist
+		      - goreleaser build --snapshot --clean
 		
 		  test:
 		    desc: Runs all go tests using gotestsum - supports passing gotestsum args
