@@ -105,7 +105,13 @@ questions:
 delimiters:
   # since goreleaser uses go templates we can override the delimiters to make
   # templating easier for us.
-  - glob: "**.goreleaser.yaml"
+  - glob: "*.goreleaser.yml"
+    left: "[["
+    right: "]]"
+  - glob: "**/workflows/publish.yml"
+    left: "[["
+    right: "]]"
+  - glob: "**/workflows/release-drafter.yml"
     left: "[["
     right: "]]"
 
