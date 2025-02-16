@@ -296,7 +296,7 @@ cli-test:  (type=dir)
 				        with:
 				          distribution: goreleaser
 				          version: latest
-				          args: release --rm-dist
+				          args: release --clean
 				        env:
 				          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 				
@@ -365,6 +365,8 @@ cli-test:  (type=dir)
 		
 		# Go workspace file
 		go.work
+		dist/
+		
 	.golanci.yml:  (type=file)
 		run:
 		  timeout: 5m
@@ -578,7 +580,7 @@ cli-test:  (type=dir)
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2025-02-14, John Doe
+		Copyright (c) 2025-02-16, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -735,10 +737,10 @@ cli-test:  (type=dir)
 				Version: build(),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:        "log-level",
-						Usage:       "log level (debug, info, warn, error, fatal, panic)",
+						Name:    "log-level",
+						Usage:   "log level (debug, info, warn, error, fatal, panic)",
 						Sources: cli.EnvVars("LOG_FORMAT"),
-						Value:       "panic",
+						Value:   "panic",
 					},
 				},
 				Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
@@ -753,15 +755,15 @@ cli-test:  (type=dir)
 				},
 				Commands: []*cli.Command{
 					{
-						Name:   "hello",
-						Usage:  "",
+						Name:  "hello",
+						Usage: "",
 						Action: func(ctx context.Context, c *cli.Command) error {
 							return ctrl.Hello(ctx)
 						},
 					},
 					{
-						Name:   "goodbye",
-						Usage:  "",
+						Name:  "goodbye",
+						Usage: "",
 						Action: func(ctx context.Context, c *cli.Command) error {
 							return ctrl.Goodbye(ctx)
 						},
