@@ -41,10 +41,10 @@ func main() {
 		Version: build(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "log-level",
-				Usage:       "log level (debug, info, warn, error, fatal, panic)",
+				Name:    "log-level",
+				Usage:   "log level (debug, info, warn, error, fatal, panic)",
 				Sources: cli.EnvVars("LOG_FORMAT"),
-				Value:       "panic",
+				Value:   "panic",
 			},
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
@@ -60,8 +60,8 @@ func main() {
 		Commands: []*cli.Command{
       {{-  range .Scaffold.commands }}
 			{
-				Name:   "{{ toKebabCase . }}",
-				Usage:  "",
+				Name:  "{{ toKebabCase . }}",
+				Usage: "",
 				Action: func(ctx context.Context, c *cli.Command) error {
 					return ctrl.{{ . | toTitleCase | replace "-" "" }}(ctx)
 				},
