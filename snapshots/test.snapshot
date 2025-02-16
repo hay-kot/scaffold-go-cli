@@ -1,5 +1,187 @@
 cli-test:  (type=dir)
 	.github:  (type=dir)
+		ISSUE_TEMPLATE:  (type=dir)
+			bug_report.yml:  (type=file)
+				---
+				name: Bug Report
+				description: "Submit a bug for the latest version"
+				title: "YOUR DESCRIPTIVE TITLE GOES HERE"
+				labels: ["bug", "triage"]
+				body:
+				  - type: checkboxes
+				    id: checks
+				    attributes:
+				      label: First Check
+				      description: |
+				        Please confirm and check all the following prior to submission. If you do not do this, your
+				        issue may be closed.
+				      options:
+				        - label: This is not a feature request.
+				          required: true
+				        - label: I added a very descriptive title to this issue (title field is above this).
+				          required: true
+				        - label: I used the GitHub search to find a similar issue and didn't find it.
+				          required: true
+				  - type: textarea
+				    id: description
+				    attributes:
+				      label: What is the issue you are experiencing?
+				      placeholder: A clear and concise description of what the bug is.
+				    validations:
+				      required: true
+				  - type: textarea
+				    id: reproduction
+				    attributes:
+				      label: Steps to Reproduce (or failing test case)
+				      placeholder: 1) ... 2) ... 3) ...
+				    validations:
+				      required: true
+				  - type: textarea
+				    id: version
+				    attributes:
+				      label: Package Version
+				      placeholder: e.g. v0.1.1
+				
+			feature_request.yml:  (type=file)
+				name: Feature Request
+				description: "Submit a new feature request"
+				title: "YOUR DESCRIPTIVE TITLE GOES HERE"
+				labels: ["feature", "triage"]
+				body:
+				  - type: checkboxes
+				    id: checks
+				    attributes:
+				      label: First Check
+				      description: |
+				        Please confirm and check all the following prior to submission. If you do not do this, your
+				        issue may be closed.
+				      options:
+				        - label: I used the GitHub search to find a similar requests and didn't find it.
+				          required: true
+				  - type: textarea
+				    id: problem
+				    attributes:
+				      label: Please provide a concise description of the problem that would be addressed by this feature.
+				    validations:
+				      required: true
+				  - type: textarea
+				    id: solution
+				    attributes:
+				      label: Please provide a concise description of the feature that would resolve your issue.
+				    validations:
+				      required: true
+				  - type: textarea
+				    id: considerations
+				    attributes:
+				      label: Please consider and list out some caveats or tradeoffs made in your design decision
+				    validations:
+				      required: true
+				  - type: checkboxes
+				    id: additional-information
+				    attributes:
+				      label: Additional Information
+				      options:
+				        - label: If this is accepted I'm willing to submit a PR to provide this feature
+				        - label: If this is accepted I'm willing to help maintain this feature
+				
+		PULL_REQUEST_TEMPLATE.md:  (type=file)
+			Fixes #
+			
+			## Purpose
+			
+			## Proposed Changes
+			
+			  -
+			  -
+			  -
+			
+			## Checklist
+			
+			- [ ] I have added tests that prove my fix is effective or that my feature works
+			- [ ] I have added necessary documentation (if appropriate)
+		release-drafter.yml:  (type=file)
+			---
+			name-template: "v$RESOLVED_VERSION"
+			tag-template: "v$RESOLVED_VERSION"
+			change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
+			sort-direction: ascending
+			
+			categories:
+			  - title: "🚨 Breaking changes"
+			    labels:
+			      - "breaking-change"
+			      - "major"
+			  - title: "✨ New features"
+			    labels:
+			      - "feature"
+			      - "minor"
+			  - title: "🐛 Bug fixes"
+			    labels:
+			      - "bugfix"
+			  - title: "🧰 Maintenance"
+			    collapse-after: 3
+			    labels:
+			      - "ci"
+			      - "chore"
+			  - title: "📚 Documentation"
+			    labels:
+			      - "documentation"
+			  - title: "⬆️ Dependency updates"
+			    collapse-after: 3
+			    labels:
+			      - "dependencies"
+			
+			exclude-labels:
+			  - "skip-changelog"
+			
+			version-resolver:
+			  major:
+			    labels:
+			      - "major"
+			      - "breaking-change"
+			  minor:
+			    labels:
+			      - "minor"
+			      - "feature"
+			  patch:
+			    labels:
+			      - "bugfix"
+			      - "chore"
+			      - "ci"
+			      - "dependencies"
+			      - "documentation"
+			  default: patch
+			
+			autolabeler:
+			  - label: "documentation"
+			    files:
+			      - "*.md"
+			    branch:
+			      - '/docs{0,1}\/.+/'
+			  - label: "bugfix"
+			    title:
+			      - "/fix: .+/i"
+			      - "/bug: .+/i"
+			    branch:
+			      - '/fix\/.+/'
+			      - '/bug\/.+/'
+			  - label: "feature"
+			    title:
+			      - "/feat: .+/i"
+			    branch:
+			      - '/feature\/.+/'
+			      - '/feat\/.+/'
+			    body:
+			      - '/implements #\d+/i'
+			  - label: "breaking-change"
+			    title:
+			      - "/breaking change: .+/i"
+			
+			template: |
+			  ## Changes
+			
+			  $CHANGES
+			
 		workflows:  (type=dir)
 			partial-tests.yml:  (type=file)
 				name: Go Build/Test
@@ -16,7 +198,8 @@ cli-test:  (type=dir)
 				      - name: Set up Go
 				        uses: actions/setup-go@v3
 				        with:
-				          go-version: 1.19
+				          go-version-file: 'go.mod'
+				          cache: true
 				
 				      - name: golangci-lint
 				        uses: golangci/golangci-lint-action@v3
@@ -51,17 +234,49 @@ cli-test:  (type=dir)
 				name: Build and Publish
 				
 				permissions:
-				  contents: write
+				  contents: write # for release
+				  pages: write
+				  id-token: write
 				
 				on:
-				  push:
-				    tags:
-				      - "*"
+				  workflow_dispatch:
+				    inputs:
+				      semverbump:
+				        description: "Which version to bump by"
+				        required: true
+				        default: "patch"
+				        type: choice
+				        options:
+				          - patch
+				          - minor
+				          - major
 				
 				jobs:
 				  backend-tests:
 				    name: "Go Build/Test"
 				    uses: ./.github/workflows/partial-tests.yml
+				
+				  tag:
+				    name: "Publish Tag"
+				    runs-on: ubuntu-latest
+				    needs:
+				      - backend-tests
+				    steps:
+				      - uses: actions/checkout@v4
+				
+				      - uses: actions-ecosystem/action-get-latest-tag@v1
+				        id: get-latest-tag
+				
+				      - uses: actions-ecosystem/action-bump-semver@v1
+				        id: bump-semver
+				        with:
+				          current_version: ${{ steps.get-latest-tag.outputs.tag }}
+				          level: ${{ inputs.semverbump }}
+				
+				      - uses: actions-ecosystem/action-push-tag@v1
+				        with:
+				          tag: ${{ steps.bump-semver.outputs.new_version }}
+				          message: "${{ steps.bump-semver.outputs.new_version }}: PR #${{ github.event.pull_request.number }} ${{ github.event.pull_request.title }}"
 				
 				  goreleaser:
 				    name: "Release"
@@ -69,21 +284,64 @@ cli-test:  (type=dir)
 				      - backend-tests
 				    runs-on: ubuntu-latest
 				    steps:
-				      - uses: actions/checkout@v3
+				      - uses: actions/checkout@v4
 				        with:
 				          fetch-depth: 0
 				      - run: git fetch --force --tags
-				      - uses: actions/setup-go@v3
+				      - uses: actions/setup-go@v5
 				        with:
-				          go-version: ">=1.19.3"
+				          go-version-file: "go.mod"
 				          cache: true
-				      - uses: goreleaser/goreleaser-action@v3
+				      - uses: goreleaser/goreleaser-action@v6
 				        with:
 				          distribution: goreleaser
 				          version: latest
 				          args: release --rm-dist
 				        env:
 				          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+				
+			release-drafter.yml:  (type=file)
+				name: Release Drafter
+				
+				on:
+				  push:
+				    # branches to consider in the event; optional, defaults to all
+				    branches:
+				      - main
+				  # pull_request event is required only for autolabeler
+				  pull_request:
+				    # Only following types are handled by the action, but one can default to all as well
+				    types: [opened, reopened, synchronize]
+				  # pull_request_target event is required for autolabeler to support PRs from forks
+				  # pull_request_target:
+				  #   types: [opened, reopened, synchronize]
+				
+				permissions:
+				  contents: read
+				
+				jobs:
+				  update_release_draft:
+				    permissions:
+				      # write permission is required to create a github release
+				      contents: write
+				      # write permission is required for autolabeler
+				      # otherwise, read permission is required at least
+				      pull-requests: write
+				    runs-on: ubuntu-latest
+				    steps:
+				      # (Optional) GitHub Enterprise requires GHE_HOST variable set
+				      #- name: Set GHE_HOST
+				      #  run: |
+				      #    echo "GHE_HOST=${GITHUB_SERVER_URL##https:\/\/}" >> $GITHUB_ENV
+				
+				      # Drafts your next Release notes as Pull Requests are merged into "main"
+				      - uses: release-drafter/release-drafter@v6
+				        # (Optional) specify config name to use, relative to .github/. Default: release-drafter.yml
+				        # with:
+				        #   config-name: my-config.yml
+				        #   disable-autolabeler: true
+				        env:
+				          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 				
 	.gitignore:  (type=file)
 		# If you prefer the allow list template instead of the deny list, see community template:
@@ -155,7 +413,6 @@ cli-test:  (type=dir)
 		    - errcheck
 		    - errorlint
 		    - exhaustive
-		    - exportloopref
 		    - gochecknoinits
 		    - goconst
 		    - gocritic
@@ -180,12 +437,15 @@ cli-test:  (type=dir)
 		issues:
 		  exclude-use-default: false
 		  fix: true
-	.goreleaser.yaml:  (type=file)
+		
+	.goreleaser.yml:  (type=file)
 		# This is an example .goreleaser.yml file with some sensible defaults.
 		# Make sure to check the documentation at https://goreleaser.com
+		version: 2
 		before:
 		  hooks:
 		    - go mod tidy
+		
 		builds:
 		  - env:
 		      - CGO_ENABLED=0
@@ -193,9 +453,15 @@ cli-test:  (type=dir)
 		      - linux
 		      - windows
 		      - darwin
+		    goarch:
+		      - amd64
+		      - arm
+		      - arm64
+		    goarm:
+		      - "7"
 		
 		archives:
-		  - format: tar.gz
+		  - formats: [tar.gz]
 		    # this name template makes the OS and Arch compatible with the results of uname.
 		    name_template: >-
 		      {{ .ProjectName }}_
@@ -207,26 +473,112 @@ cli-test:  (type=dir)
 		    # use zip for windows archives
 		    format_overrides:
 		      - goos: windows
-		        format: zip
+		        formats: [zip]
+		
 		checksum:
 		  name_template: "checksums.txt"
+		
 		snapshot:
-		  name_template: "{{ incpatch .Version }}-next"
+		  version_template: "{{ incpatch .Version }}-next"
+		
 		changelog:
 		  sort: asc
 		  filters:
 		    exclude:
 		      - "^docs:"
 		      - "^test:"
+		
+		
+		brews:
+		  - repository:
+		      owner: "hay-kot"
+		      name: "homebrew-scaffold-go-cli-tap"
+		    description: "A new project"
+		    license: "MIT license"
+		    dependencies:
+		      - name: go
+		        type: optional
+		      - name: git
+		    test: |
+		      system "#{bin}/project version"
+		
+		
+		
+		dockers:
+		  - use: buildx
+		    goos: linux
+		    goarch: arm
+		    goarm: 7
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-armv7"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-armv7"
+		    build_flag_templates:
+		      - "--platform=linux/arm/v7"
+		      - "--pull"
+		      - "--label=org.opencontainers.image.created={{.Date}}"
+		      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+		      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+		      - "--label=org.opencontainers.image.version=v{{.Version}}"
+		
+		  - use: buildx
+		    goos: linux
+		    goarch: arm64
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-arm64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-arm64"
+		    build_flag_templates:
+		      - "--platform=linux/arm64"
+		      - "--pull"
+		      - "--label=org.opencontainers.image.created={{.Date}}"
+		      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+		      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+		      - "--label=org.opencontainers.image.version=v{{.Version}}"
+		
+		  - use: buildx
+		    goos: linux
+		    goarch: amd64
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-amd64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-amd64"
+		    build_flag_templates:
+		      - "--platform=linux/amd64"
+		      - "--pull"
+		      - "--label=org.opencontainers.image.created={{.Date}}"
+		      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+		      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+		      - "--label=org.opencontainers.image.version=v{{.Version}}"
+		
+		docker_manifests:
+		  - name_template: "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}"
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-amd64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-arm64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-armv7"
+		  - name_template: "ghcr.io/hay-kot/scaffold-go-cli:latest"
+		    image_templates:
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-amd64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-arm64"
+		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-armv7"
+		
+		
+		#
+		#--------------------------------------------------------------------------------------------------
+		# Meta
+		#
 		# The lines beneath this are called `modelines`. See `:help modeline`
 		# Feel free to remove those if you don't want/use them.
 		# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 		# vim: set ts=2 sw=2 tw=0 fo=cnqoj
 		
+	Dockerfile:  (type=file)
+		FROM gcr.io/distroless/static
+		ENTRYPOINT ["project"]
+		COPY project /
+		
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2024-10-22, John Doe
+		Copyright (c) 2025-02-14, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -254,59 +606,58 @@ cli-test:  (type=dir)
 		## Installation
 		
 		```bash
-		go install https://github.com/username/project
+		go install github.com/username/project
 		```
 		
 		## Usage
 		
 		TODO
 		
-		
 	go.mod:  (type=file)
 		module github.com/username/project
 		
-		go 1.22
+		go 1.24
 		
 		require (
-			github.com/rs/zerolog v1.31.0
-			github.com/urfave/cli/v2 v2.26.0
+			github.com/rs/zerolog v1.33.0
+			github.com/urfave/cli/v3 v3.0.0-beta1
 		)
 		
 		require (
-			github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
-			github.com/mattn/go-colorable v0.1.13 // indirect
+			github.com/mattn/go-colorable v0.1.14 // indirect
 			github.com/mattn/go-isatty v0.0.20 // indirect
-			github.com/russross/blackfriday/v2 v2.1.0 // indirect
-			github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-			golang.org/x/sys v0.15.0 // indirect
+			golang.org/x/sys v0.30.0 // indirect
 		)
 		
 	go.sum:  (type=file)
 		github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
-		github.com/cpuguy83/go-md2man/v2 v2.0.3 h1:qMCsGGgs+MAzDFyp9LpAe1Lqy/fY/qCovCm0qnXZOBM=
-		github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
+		github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
+		github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 		github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
-		github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
 		github.com/mattn/go-colorable v0.1.13/go.mod h1:7S9/ev0klgBDR4GtXTXX8a3vIGJpMovkB8vQcUbaXHg=
+		github.com/mattn/go-colorable v0.1.14 h1:9A9LHSqF/7dyVVX6g0U9cwm9pG3kP9gSzcuIPHPsaIE=
+		github.com/mattn/go-colorable v0.1.14/go.mod h1:6LmQG8QLFO4G5z1gPvYEzlUgJ2wF+stgPZH1UqBm1s8=
 		github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 		github.com/mattn/go-isatty v0.0.19/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 		github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 		github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 		github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+		github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
+		github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 		github.com/rs/xid v1.5.0/go.mod h1:trrq9SKmegXys3aeAKXMUTdJsYXVwGY3RLcfgqegfbg=
-		github.com/rs/zerolog v1.31.0 h1:FcTR3NnLWW+NnTwwhFWiJSZr4ECLpqCm6QsEnyvbV4A=
-		github.com/rs/zerolog v1.31.0/go.mod h1:/7mN4D5sKwJLZQ2b/znpjC3/GQWY/xaDXUM0kKWRHss=
-		github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf35Ld67mk=
-		github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
-		github.com/urfave/cli/v2 v2.26.0 h1:3f3AMg3HpThFNT4I++TKOejZO8yU55t3JnnSr4S4QEI=
-		github.com/urfave/cli/v2 v2.26.0/go.mod h1:8qnjx1vcq5s2/wpsqoZFndg2CE5tNFyrTvS6SinrnYQ=
-		github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 h1:bAn7/zixMGCfxrRTfdpNzjtPYqr8smhKouy9mxVdGPU=
-		github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
+		github.com/rs/zerolog v1.33.0 h1:1cU2KZkvPxNyfgEmhHAz/1A9Bz+llsdYzklWFzgp0r8=
+		github.com/rs/zerolog v1.33.0/go.mod h1:/7mN4D5sKwJLZQ2b/znpjC3/GQWY/xaDXUM0kKWRHss=
+		github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
+		github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+		github.com/urfave/cli/v3 v3.0.0-beta1 h1:6DTaaUarcM0wX7qj5Hcvs+5Dm3dyUTBbEwIWAjcw9Zg=
+		github.com/urfave/cli/v3 v3.0.0-beta1/go.mod h1:FnIeEMYu+ko8zP1F9Ypr3xkZMIDqW3DR92yUtY39q1Y=
 		golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 		golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 		golang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-		golang.org/x/sys v0.15.0 h1:h48lPFYpsTvQJZF4EKyI4aLHaev3CxivZmv7yZig9pc=
-		golang.org/x/sys v0.15.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+		golang.org/x/sys v0.30.0 h1:QjkSwP/36a20jFYWkSue1YwXzLmsV5Gfq7Eiy72C1uc=
+		golang.org/x/sys v0.30.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+		gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+		gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 		
 	internal:  (type=dir)
 		commands:  (type=dir)
@@ -344,12 +695,13 @@ cli-test:  (type=dir)
 		package main
 		
 		import (
+			"context"
 			"fmt"
 			"os"
 		
 			"github.com/rs/zerolog"
 			"github.com/rs/zerolog/log"
-			"github.com/urfave/cli/v2"
+			"github.com/urfave/cli/v3"
 		
 			"github.com/username/project/internal/commands"
 		)
@@ -377,7 +729,7 @@ cli-test:  (type=dir)
 		
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		
-			app := &cli.App{
+			app := &cli.Command{
 				Name:    "cli-test",
 				Usage:   `A new project`,
 				Version: build(),
@@ -385,41 +737,55 @@ cli-test:  (type=dir)
 					&cli.StringFlag{
 						Name:        "log-level",
 						Usage:       "log level (debug, info, warn, error, fatal, panic)",
+						Sources: cli.EnvVars("LOG_FORMAT"),
 						Value:       "panic",
 					},
 				},
-				Before: func(ctx *cli.Context) error {
-					level, err := zerolog.ParseLevel(ctx.String("log-level"))
+				Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
+					level, err := zerolog.ParseLevel(c.String("log-level"))
 					if err != nil {
-						return fmt.Errorf("failed to parse log level: %w", err)
+						return ctx, fmt.Errorf("failed to parse log level: %w", err)
 					}
 		
 					log.Logger = log.Level(level)
 		
-					return nil
+					return ctx, nil
 				},
 				Commands: []*cli.Command{
-		      {
+					{
 						Name:   "hello",
 						Usage:  "",
-						Action: func(ctx *cli.Context) error {
-							return ctrl.Hello(ctx.Context)
+						Action: func(ctx context.Context, c *cli.Command) error {
+							return ctrl.Hello(ctx)
 						},
-					},{
+					},
+					{
 						Name:   "goodbye",
 						Usage:  "",
-						Action: func(ctx *cli.Context) error {
-							return ctrl.Goodbye(ctx.Context)
+						Action: func(ctx context.Context, c *cli.Command) error {
+							return ctrl.Goodbye(ctx)
 						},
 					},
 				},
 			}
 		
-			if err := app.Run(os.Args); err != nil {
+			ctx := context.Background()
+		
+			if err := app.Run(ctx, os.Args); err != nil {
 				log.Fatal().Err(err).Msg("failed to run cli-test")
 			}
 		}
 		
+	renovate.json:  (type=file)
+		{
+		    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+		    "extends": [
+		        "config:base"
+		    ],
+		    "postUpdateOptions": [
+		        "gomodTidy"
+		    ]
+		}
 	taskfile.yml:  (type=file)
 		version: "3"
 		
@@ -436,7 +802,7 @@ cli-test:  (type=dir)
 		  build:
 		    desc: Builds the backend binary
 		    cmds:
-		      - goreleaser build --snapshot --rm-dist
+		      - goreleaser build --snapshot --clean
 		
 		  test:
 		    desc: Runs all go tests using gotestsum - supports passing gotestsum args

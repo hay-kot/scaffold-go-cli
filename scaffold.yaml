@@ -1,3 +1,6 @@
+# yaml-language-server: $schema=https://hay-kot.github.io/scaffold/schema.json
+metadata:
+  minumum_version: v0.6.1
 messages:
   pre: |
     # Go urfave/cli/v2 Project Scaffold
@@ -12,8 +15,8 @@ messages:
     task run -- hello
     ```
 skip:
-  - "*.goreleaser.yaml"
   - "*taskfile.yml"
+
 questions:
   - name: "gomod"
     group: "general"
@@ -45,22 +48,84 @@ questions:
         - "ISC license"
         - "Apache Software License 2.0"
         - "GNU General Public License v3"
-  - name: "ci_provider"
-    group: "cli"
-    prompt:
-      message: "CI Provider"
-      description: "Choose a CI provider for your project"
-      default: "github"
-      options:
-        - "github"
-        - "drone.io"
-        - "none"
+
   - name: "commands"
-    group: "cli"
+    group: "general"
     prompt:
       message: "Commands"
       description: "List of commands to generate (kebab case)"
       loop: true
+    validate:
+      min: 1
+      match:
+        regex: "^[a-z]+(-[a-z]+)*$"
+        message: "inputs must be in kebab-case"
+
+  - name: "feature_gh_actions"
+    group: "features"
+    prompt:
+      confirm: "Github Actions"
+      default: true
+      description: "Do you want to use github actions?"
+  - name: "feature_docker"
+    group: "features"
+    prompt:
+      confirm: "Publish Docker Images"
+      default: true
+      description: "Do you want to publish docker images?"
+  - name: "feature_homebrew_tap"
+    group: "features"
+    prompt:
+      confirm: "Publish Homebrew Tap"
+      default: true
+      description: "Do you want to publish a homebrew tap?"
+  - name: "feature_renovate"
+    group: "features"
+    prompt:
+      confirm: "Enable Renovate?"
+      description: "Automatically update dependencies, via Renovate"
+      default: true
+  - name: "feature_release_drafter"
+    group: "features"
+    prompt:
+      confirm: "Enable Release Draft"
+      description: "Automatically draft release notes, via Release Drafter"
+      default: true
+
+  - name: "docker_registry_url"
+    group: "docker"
+    when: "{{ .feature_docker }}"
+    prompt:
+      message: "Dockr Registry"
+      description: "Registry package url (e.g ghcr.io/hay-kot/scaffold)"
+      default: "ghcr.io"
+
+  - name: "homebrew_owner"
+    group: "homebrew_tap"
+    when: "{{ .feature_homebrew_tap }}"
+    prompt:
+      message: "Homebrew Tap Owner"
+      description: "Tap repository owner"
+  - name: "homebrew_name"
+    group: "homebrew_tap"
+    when: "{{ .feature_homebrew_tap }}"
+    prompt:
+      message: "Homebrew Tap Name"
+      description: "e.g. homebrew-scaffold-tap"
+      default: "homebrew-"
+
+delimiters:
+  # since goreleaser uses go templates we can override the delimiters to make
+  # templating easier for us.
+  - glob: "*.goreleaser.yml"
+    left: "[["
+    right: "]]"
+  - glob: "**/workflows/publish.yml"
+    left: "[["
+    right: "]]"
+  - glob: "**/workflows/release-drafter.yml"
+    left: "[["
+    right: "]]"
 
 presets:
   test:
@@ -69,7 +134,25 @@ presets:
     full_name: "John Doe"
     description: "A new project"
     open_source_license: "MIT license"
-    ci_provider: "github"
+    feature_gh_actions: true
+    feature_renovate: true
+    feature_docker: true
+    feature_release_drafter: true
+    docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
+    feature_homebrew_tap: true
+    homebrew_owner: "hay-kot"
+    homebrew_name: "homebrew-scaffold-go-cli-tap"
     commands:
       - "hello"
       - "goodbye"
+
+features:
+  - value: "{{ .Scaffold.feature_renovate }}"
+    globs:
+      - "**/renovate.json"
+  - value: "{{ .Scaffold.feature_release_drafter }}"
+    globs:
+      - "**/*release-drafter.yml"
+  - value: "{{ .Scaffold.feature_gh_actions }}"
+    globs:
+      - "**/workflows/**.yml"

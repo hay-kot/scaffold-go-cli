@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 
 	"{{ .Scaffold.gomod }}/internal/commands"
 )
@@ -34,7 +35,7 @@ func main() {
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	app := &cli.App{
+	app := &cli.Command{
 		Name:    "{{ .Project }}",
 		Usage:   `{{ .Scaffold.description }}`,
 		Version: build(),
@@ -42,32 +43,36 @@ func main() {
 			&cli.StringFlag{
 				Name:        "log-level",
 				Usage:       "log level (debug, info, warn, error, fatal, panic)",
+				Sources: cli.EnvVars("LOG_FORMAT"),
 				Value:       "panic",
 			},
 		},
-		Before: func(ctx *cli.Context) error {
-			level, err := zerolog.ParseLevel(ctx.String("log-level"))
+		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
+			level, err := zerolog.ParseLevel(c.String("log-level"))
 			if err != nil {
-				return fmt.Errorf("failed to parse log level: %w", err)
+				return ctx, fmt.Errorf("failed to parse log level: %w", err)
 			}
 
 			log.Logger = log.Level(level)
 
-			return nil
+			return ctx, nil
 		},
 		Commands: []*cli.Command{
-      {{  range .Scaffold.commands -}}
+      {{-  range .Scaffold.commands }}
 			{
 				Name:   "{{ toKebabCase . }}",
 				Usage:  "",
-				Action: func(ctx *cli.Context) error {
-					return ctrl.{{ . | toTitleCase | replace "-" "" }}(ctx.Context)
+				Action: func(ctx context.Context, c *cli.Command) error {
+					return ctrl.{{ . | toTitleCase | replace "-" "" }}(ctx)
 				},
-			},{{end }}
+			},
+			{{- end }}
 		},
 	}
 
-	if err := app.Run(os.Args); err != nil {
+	ctx := context.Background()
+
+	if err := app.Run(ctx, os.Args); err != nil {
 		log.Fatal().Err(err).Msg("failed to run {{ .Project }}")
 	}
 }

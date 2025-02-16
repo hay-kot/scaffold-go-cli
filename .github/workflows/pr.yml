@@ -16,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.22"
+          go-version: 'stable'
 
       - name: Install scaffold
         run: go install github.com/hay-kot/scaffold@latest

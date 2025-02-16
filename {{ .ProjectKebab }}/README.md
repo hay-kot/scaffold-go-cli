@@ -5,10 +5,9 @@
 ## Installation
 
 ```bash
-go install https://{{ .Scaffold.gomod }}
+go install {{ .Scaffold.gomod }}
 ```
 
 ## Usage
 
 TODO
-

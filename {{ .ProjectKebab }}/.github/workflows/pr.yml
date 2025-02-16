@@ -1,4 +1,3 @@
-{{ if eq .Scaffold.ci_provider "github" -}}
 name: pr
 
 on:
@@ -13,4 +12,3 @@ jobs:
   backend-tests:
     name: "Go Build/Test"
     uses: ./.github/workflows/partial-tests.yml
-{{ end }}
