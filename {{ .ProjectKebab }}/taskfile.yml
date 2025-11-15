@@ -41,6 +41,12 @@ tasks:
     cmds:
       - golangci-lint run ./...
 
+  fmt:
+    desc: Runs golangci-lint fmt on the backend
+    dir: backend
+    cmds:
+      - golangci-lint fmt
+
   pr:
     desc: Runs all go test and lint related tasks for PRs
     cmds:

@@ -3,9 +3,9 @@ metadata:
   minumum_version: v0.6.1
 messages:
   pre: |
-    # Go urfave/cli/v2 Project Scaffold
+    # Go urfave/cli/v3 Project Scaffold
 
-    Generate boilerplate code for a new urfave/cli/v2 project.
+    Generate boilerplate code for a new urfave/cli/v3 project.
 
   post: |
     # Get Started
@@ -91,12 +91,18 @@ questions:
       confirm: "Enable Release Draft"
       description: "Automatically draft release notes, via Release Drafter"
       default: true
+  - name: "feature_file_logging"
+    group: "features"
+    prompt:
+      confirm: "Enable File Logging"
+      description: "Add support for logging to files"
+      default: false
 
   - name: "docker_registry_url"
     group: "docker"
     when: "{{ .feature_docker }}"
     prompt:
-      message: "Dockr Registry"
+      message: "Docker Registry"
       description: "Registry package url (e.g ghcr.io/hay-kot/scaffold)"
       default: "ghcr.io"
 
@@ -138,6 +144,7 @@ presets:
     feature_renovate: true
     feature_docker: true
     feature_release_drafter: true
+    feature_file_logging: false
     docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
     feature_homebrew_tap: true
     homebrew_owner: "hay-kot"

@@ -69,9 +69,14 @@ linters:
 issues:
   fix: true
 formatters:
+  enable:
+    - gofumpt
   exclusions:
     generated: lax
     paths:
       - third_party$
       - builtin$
       - examples$
+  settings:
+    gofumpt:
+      extra-rules: false

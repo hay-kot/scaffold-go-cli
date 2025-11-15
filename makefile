@@ -27,5 +27,3 @@ test/run:
 			echo "Output is incorrect: $$output"; \
 			exit 1; \
 		fi
-
-
