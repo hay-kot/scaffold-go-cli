@@ -56,7 +56,11 @@ for repo in "${!actions[@]}"; do
 
 		# Replace all occurrences across workflow files
 		for file in "$WORKFLOWS_DIR"/*.yml; do
-			sed -i '' "s|$repo@$current|$repo@$latest|g" "$file"
+			if [[ "$OSTYPE" == "darwin"* ]]; then
+				sed -i '' "s|$repo@$current|$repo@$latest|g" "$file"
+			else
+				sed -i "s|$repo@$current|$repo@$latest|g" "$file"
+			fi
 		done
 
 		updated=$((updated + 1))
