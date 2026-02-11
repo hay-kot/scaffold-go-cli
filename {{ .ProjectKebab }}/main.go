@@ -14,7 +14,6 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"{{ .Scaffold.gomod }}/internal/commands"
-	"{{ .Scaffold.gomod }}/internal/printer"
 )
 
 var (
@@ -92,9 +91,6 @@ func main() {
 	}
 {{- end }}
 
-	p := printer.New(os.Stderr)
-	ctx := printer.NewContext(context.Background(), p)
-
 	flags := &commands.Flags{}
 
 	app := &cli.Command{
@@ -138,9 +134,15 @@ func main() {
 {{- end }}
 
 	exitCode := 0
-	if err := app.Run(ctx, os.Args); err != nil {
-		fmt.Println()
-		printer.Ctx(ctx).FatalError(err)
+	if err := app.Run(context.Background(), os.Args); err != nil {
+		const colorRed = "\033[38;2;215;95;107m"
+		const colorGray = "\033[38;2;163;163;163m"
+		const colorReset = "\033[0m"
+		fmt.Fprintf(os.Stderr, "\n%s╭ Error%s\n%s│%s %s%s%s\n%s╵%s\n",
+			colorRed, colorReset,
+			colorRed, colorReset, colorGray, err.Error(), colorReset,
+			colorRed, colorReset,
+		)
 		exitCode = 1
 	}
 

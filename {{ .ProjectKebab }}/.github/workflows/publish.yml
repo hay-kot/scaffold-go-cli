@@ -3,8 +3,6 @@ name: Build and Publish
 permissions:
   contents: write # for release
   packages: write
-  pages: write
-  id-token: write
 
 on:
   workflow_dispatch:
@@ -44,7 +42,7 @@ jobs:
       - uses: actions-ecosystem/action-push-tag@v1
         with:
           tag: ${{ steps.bump-semver.outputs.new_version }}
-          message: "${{ steps.bump-semver.outputs.new_version }}: PR #${{ github.event.pull_request.number }} ${{ github.event.pull_request.title }}"
+          message: "${{ steps.bump-semver.outputs.new_version }}"
 
   goreleaser:
     name: "Release"
@@ -61,7 +59,7 @@ jobs:
         with:
           go-version-file: "go.mod"
           cache: true
-      - uses: docker/login-action@v1
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

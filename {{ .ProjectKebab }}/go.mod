@@ -1,10 +1,10 @@
 module {{ .Scaffold.gomod }}
 
-go 1.25
+go 1.26
 
 require (
 	github.com/rs/zerolog v1.33.0
-	github.com/urfave/cli/v3 v3.0.0-beta1
+	github.com/urfave/cli/v3 v3.6.2
 )
 
 require (
