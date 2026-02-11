@@ -67,29 +67,19 @@ func setupLogger(level string, logFile string) error {
 }
 {{- else }}
 func setupLogger(level string) error {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	parsedLevel, err := zerolog.ParseLevel(level)
 	if err != nil {
 		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
-	log.Logger = log.Level(parsedLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).Level(parsedLevel)
 
 	return nil
 }
 {{- end }}
 
 func main() {
-{{- if .Scaffold.feature_file_logging }}
-	if err := setupLogger("info", ""); err != nil {
-		panic(err)
-	}
-{{- else }}
-	if err := setupLogger("info"); err != nil {
-		panic(err)
-	}
-{{- end }}
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	flags := &commands.Flags{}
 
