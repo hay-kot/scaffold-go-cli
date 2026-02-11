@@ -14,6 +14,12 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"{{ .Scaffold.gomod }}/internal/commands"
+{{- if .Scaffold.feature_config_file }}
+	"{{ .Scaffold.gomod }}/internal/config"
+{{- end }}
+{{- if .Scaffold.feature_file_logging }}
+	"{{ .Scaffold.gomod }}/internal/paths"
+{{- end }}
 )
 
 var (
@@ -84,9 +90,10 @@ func main() {
 	flags := &commands.Flags{}
 
 	app := &cli.Command{
-		Name:    "{{ .Project }}",
-		Usage:   `{{ .Scaffold.description }}`,
-		Version: build(),
+		Name:                  "{{ .Project }}",
+		Usage:                 `{{ .Scaffold.description }}`,
+		Version:               build(),
+		EnableShellCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "log-level",
@@ -103,10 +110,50 @@ func main() {
 				Destination: &flags.LogFile,
 			},
 {{- end }}
+{{- if .Scaffold.feature_config_file }}
+			&cli.StringFlag{
+				Name:        "config",
+				Usage:       "path to config file",
+				Sources:     cli.EnvVars("CONFIG_FILE"),
+				Destination: &flags.ConfigFile,
+			},
+{{- end }}
+{{- if .Scaffold.feature_json_output }}
+			&cli.BoolFlag{
+				Name:        "json",
+				Usage:       "output in JSON format",
+				Destination: &flags.JSON,
+			},
+{{- end }}
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
+{{- if .Scaffold.feature_config_file }}
+			cfg, err := func() (config.Config, error) {
+				if flags.ConfigFile != "" {
+					return config.ReadFrom(flags.ConfigFile)
+				}
+				return config.Read()
+			}()
+			if err != nil {
+				return ctx, fmt.Errorf("loading config: %w", err)
+			}
+
+			if flags.LogLevel == "info" && cfg.LogLevel != "" {
+				flags.LogLevel = cfg.LogLevel
+			}
 {{- if .Scaffold.feature_file_logging }}
-			if err := setupLogger(flags.LogLevel, flags.LogFile); err != nil {
+			if flags.LogFile == "" && cfg.LogFile != "" {
+				flags.LogFile = cfg.LogFile
+			}
+{{- end }}
+{{- end }}
+{{- if .Scaffold.feature_file_logging }}
+			logFile := flags.LogFile
+			if logFile == "" {
+				logFile = filepath.Join(paths.DataDir(), "{{ .Scaffold.gomod | pathBase }}.log")
+			}
+
+			if err := setupLogger(flags.LogLevel, logFile); err != nil {
 				return ctx, err
 			}
 {{- else }}
