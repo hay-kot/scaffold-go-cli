@@ -202,7 +202,7 @@ cli-test:  (type=dir)
 				          cache: true
 				
 				      - name: golangci-lint
-				        uses: golangci/golangci-lint-action@v8
+				        uses: golangci/golangci-lint-action@v9
 				        with:
 				          version: latest
 				          args: --timeout=6m
@@ -260,7 +260,7 @@ cli-test:  (type=dir)
 				    needs:
 				      - backend-tests
 				    steps:
-				      - uses: actions/checkout@v4
+				      - uses: actions/checkout@v6
 				
 				      - uses: actions-ecosystem/action-get-latest-tag@v1
 				        id: get-latest-tag
@@ -283,11 +283,11 @@ cli-test:  (type=dir)
 				      - tag
 				    runs-on: ubuntu-latest
 				    steps:
-				      - uses: actions/checkout@v4
+				      - uses: actions/checkout@v6
 				        with:
 				          fetch-depth: 0
 				      - run: git fetch --force --tags
-				      - uses: actions/setup-go@v5
+				      - uses: actions/setup-go@v6
 				        with:
 				          go-version-file: "go.mod"
 				          cache: true
