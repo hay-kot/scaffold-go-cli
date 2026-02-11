@@ -6,4 +6,10 @@ type Flags struct {
 {{- if .Scaffold.feature_file_logging }}
 	LogFile  string
 {{- end }}
+{{- if .Scaffold.feature_config_file }}
+	ConfigFile string
+{{- end }}
+{{- if .Scaffold.feature_json_output }}
+	JSON bool
+{{- end }}
 }

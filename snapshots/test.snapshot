@@ -193,18 +193,17 @@ cli-test:  (type=dir)
 				  Go:
 				    runs-on: ubuntu-latest
 				    steps:
-				      - uses: actions/checkout@v3
+				      - uses: actions/checkout@v5
 				
 				      - name: Set up Go
-				        uses: actions/setup-go@v3
+				        uses: actions/setup-go@v6
 				        with:
-				          go-version-file: 'go.mod'
+				          go-version-file: "./go.mod"
 				          cache: true
 				
 				      - name: golangci-lint
-				        uses: golangci/golangci-lint-action@v3
+				        uses: golangci/golangci-lint-action@v9
 				        with:
-				          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
 				          version: latest
 				          args: --timeout=6m
 				
@@ -236,8 +235,6 @@ cli-test:  (type=dir)
 				permissions:
 				  contents: write # for release
 				  packages: write
-				  pages: write
-				  id-token: write
 				
 				on:
 				  workflow_dispatch:
@@ -263,7 +260,7 @@ cli-test:  (type=dir)
 				    needs:
 				      - backend-tests
 				    steps:
-				      - uses: actions/checkout@v4
+				      - uses: actions/checkout@v6
 				
 				      - uses: actions-ecosystem/action-get-latest-tag@v1
 				        id: get-latest-tag
@@ -277,7 +274,7 @@ cli-test:  (type=dir)
 				      - uses: actions-ecosystem/action-push-tag@v1
 				        with:
 				          tag: ${{ steps.bump-semver.outputs.new_version }}
-				          message: "${{ steps.bump-semver.outputs.new_version }}: PR #${{ github.event.pull_request.number }} ${{ github.event.pull_request.title }}"
+				          message: "${{ steps.bump-semver.outputs.new_version }}"
 				
 				  goreleaser:
 				    name: "Release"
@@ -286,15 +283,15 @@ cli-test:  (type=dir)
 				      - tag
 				    runs-on: ubuntu-latest
 				    steps:
-				      - uses: actions/checkout@v4
+				      - uses: actions/checkout@v6
 				        with:
 				          fetch-depth: 0
 				      - run: git fetch --force --tags
-				      - uses: actions/setup-go@v5
+				      - uses: actions/setup-go@v6
 				        with:
 				          go-version-file: "go.mod"
 				          cache: true
-				      - uses: docker/login-action@v1
+				      - uses: docker/login-action@v3
 				        with:
 				          registry: ghcr.io
 				          username: ${{ github.actor }}
@@ -408,7 +405,7 @@ cli-test:  (type=dir)
 		      rules:
 		        main:
 		          deny:
-		            - pkg: io/util
+		            - pkg: io/ioutil
 		              desc: |
 		                Deprecated: As of Go 1.16, the same functionality is now provided by
 		                package io or package os, and those implementations should be
@@ -421,9 +418,6 @@ cli-test:  (type=dir)
 		    goconst:
 		      min-len: 5
 		      min-occurrences: 5
-		    gocritic:
-		      enabled-checks:
-		        - ruleguard
 		    revive:
 		      confidence: 3
 		      severity: warning
@@ -598,7 +592,7 @@ cli-test:  (type=dir)
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2025-11-14, John Doe
+		Copyright (c) 2026-02-11, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -636,11 +630,11 @@ cli-test:  (type=dir)
 	go.mod:  (type=file)
 		module github.com/username/project
 		
-		go 1.25
+		go 1.26
 		
 		require (
 			github.com/rs/zerolog v1.33.0
-			github.com/urfave/cli/v3 v3.0.0-beta1
+			github.com/urfave/cli/v3 v3.6.2
 		)
 		
 		require (
@@ -667,10 +661,10 @@ cli-test:  (type=dir)
 		github.com/rs/xid v1.5.0/go.mod h1:trrq9SKmegXys3aeAKXMUTdJsYXVwGY3RLcfgqegfbg=
 		github.com/rs/zerolog v1.33.0 h1:1cU2KZkvPxNyfgEmhHAz/1A9Bz+llsdYzklWFzgp0r8=
 		github.com/rs/zerolog v1.33.0/go.mod h1:/7mN4D5sKwJLZQ2b/znpjC3/GQWY/xaDXUM0kKWRHss=
-		github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
-		github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-		github.com/urfave/cli/v3 v3.0.0-beta1 h1:6DTaaUarcM0wX7qj5Hcvs+5Dm3dyUTBbEwIWAjcw9Zg=
-		github.com/urfave/cli/v3 v3.0.0-beta1/go.mod h1:FnIeEMYu+ko8zP1F9Ypr3xkZMIDqW3DR92yUtY39q1Y=
+		github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
+		github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
+		github.com/urfave/cli/v3 v3.6.2 h1:lQuqiPrZ1cIz8hz+HcrG0TNZFxU70dPZ3Yl+pSrH9A8=
+		github.com/urfave/cli/v3 v3.6.2/go.mod h1:ysVLtOEmg2tOy6PknnYVhDoouyC/6N42TMeoMzskhso=
 		golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 		golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 		golang.org/x/sys v0.12.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
@@ -764,111 +758,48 @@ cli-test:  (type=dir)
 					LogLevel string
 				}
 				
-		printer:  (type=dir)
-			printer.go:  (type=file)
-				package printer
+		paths:  (type=dir)
+			paths.go:  (type=file)
+				package paths
 				
 				import (
-					"context"
-					"fmt"
-					"io"
 					"os"
-					"strings"
+					"path/filepath"
 				)
 				
-				// ANSI color codes
-				const (
-					ColorReset = "\033[0m"
-					ColorRed   = "\033[38;2;215;95;107m"  // #d75f6b
-					ColorGreen = "\033[38;2;34;197;94m"   // #22c55e
-					ColorGray  = "\033[38;2;163;163;163m" // #a3a3a3
-					ColorBold  = "\033[1m"
-				)
+				const appName = "project"
 				
-				// Symbols
-				const (
-					Check  = "✔"
-					Cross  = "✘"
-					Folder = ""
-					Dot    = "•"
-				)
-				
-				type ctxKey struct{}
-				
-				// Printer handles formatted output with colors and styles
-				type Printer struct {
-					writer io.Writer
-				}
-				
-				// New creates a new Printer that writes to the given writer
-				func New(w io.Writer) *Printer {
-					return &Printer{
-						writer: w,
-					}
-				}
-				
-				// NewContext returns a context with the printer attached
-				func NewContext(ctx context.Context, p *Printer) context.Context {
-					return context.WithValue(ctx, ctxKey{}, p)
-				}
-				
-				// Ctx retrieves the printer from context, or creates a default one
-				func Ctx(ctx context.Context) *Printer {
-					if p, ok := ctx.Value(ctxKey{}).(*Printer); ok {
-						return p
-					}
-					return New(os.Stderr)
-				}
-				
-				// FatalError prints a formatted error box and does NOT exit
-				// Caller should handle exit code
-				func (p *Printer) FatalError(err error) {
-					if err == nil {
-						return
+				// ConfigDir returns the XDG config directory for the application.
+				// Uses $XDG_CONFIG_HOME/<app> or falls back to ~/.config/<app>.
+				func ConfigDir() string {
+					if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
+						return filepath.Join(dir, appName)
 					}
 				
-					lines := []string{
-						p.colorize(ColorRed, "╭ Error"),
-						p.colorize(ColorRed, "│") + " " + p.colorize(ColorGray, err.Error()),
-						p.colorize(ColorRed, "╵"),
+					home, _ := os.UserHomeDir()
+					return filepath.Join(home, ".config", appName)
+				}
+				
+				// DataDir returns the XDG data directory for the application.
+				// Uses $XDG_DATA_HOME/<app> or falls back to ~/.local/share/<app>.
+				func DataDir() string {
+					if dir := os.Getenv("XDG_DATA_HOME"); dir != "" {
+						return filepath.Join(dir, appName)
 					}
 				
-					output := strings.Join(lines, "\n") + "\n"
-					_, _ = p.writer.Write([]byte(output))
+					home, _ := os.UserHomeDir()
+					return filepath.Join(home, ".local", "share", appName)
 				}
 				
-				// Error prints an error message in red
-				func (p *Printer) Error(format string, args ...interface{}) {
-					msg := fmt.Sprintf(format, args...)
-					_, _ = p.writer.Write([]byte(p.colorize(ColorRed, Cross+" "+msg) + "\n"))
-				}
+				// CacheDir returns the XDG cache directory for the application.
+				// Uses $XDG_CACHE_HOME/<app> or falls back to ~/.cache/<app>.
+				func CacheDir() string {
+					if dir := os.Getenv("XDG_CACHE_HOME"); dir != "" {
+						return filepath.Join(dir, appName)
+					}
 				
-				// Success prints a success message in green
-				func (p *Printer) Success(format string, args ...interface{}) {
-					msg := fmt.Sprintf(format, args...)
-					_, _ = p.writer.Write([]byte(p.colorize(ColorGreen, Check+" "+msg) + "\n"))
-				}
-				
-				// Info prints an info message in gray
-				func (p *Printer) Info(format string, args ...interface{}) {
-					msg := fmt.Sprintf(format, args...)
-					_, _ = p.writer.Write([]byte(p.colorize(ColorGray, Dot+" "+msg) + "\n"))
-				}
-				
-				// Println prints a plain message without colors
-				func (p *Printer) Println(format string, args ...interface{}) {
-					msg := fmt.Sprintf(format, args...)
-					_, _ = p.writer.Write([]byte(msg + "\n"))
-				}
-				
-				// colorize applies ANSI color codes to text
-				func (p *Printer) colorize(color, text string) string {
-					return color + text + ColorReset
-				}
-				
-				// Bold makes text bold
-				func (p *Printer) Bold(text string) string {
-					return ColorBold + text + ColorReset
+					home, _ := os.UserHomeDir()
+					return filepath.Join(home, ".cache", appName)
 				}
 				
 	main.go:  (type=file)
@@ -884,7 +815,6 @@ cli-test:  (type=dir)
 			"github.com/urfave/cli/v3"
 		
 			"github.com/username/project/internal/commands"
-			"github.com/username/project/internal/printer"
 		)
 		
 		var (
@@ -903,32 +833,26 @@ cli-test:  (type=dir)
 			return fmt.Sprintf("%s (%s) %s", version, short, date)
 		}
 		func setupLogger(level string) error {
-			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-		
 			parsedLevel, err := zerolog.ParseLevel(level)
 			if err != nil {
 				return fmt.Errorf("failed to parse log level: %w", err)
 			}
 		
-			log.Logger = log.Level(parsedLevel)
+			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).Level(parsedLevel)
 		
 			return nil
 		}
 		
 		func main() {
-			if err := setupLogger("info"); err != nil {
-				panic(err)
-			}
-		
-			p := printer.New(os.Stderr)
-			ctx := printer.NewContext(context.Background(), p)
+			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		
 			flags := &commands.Flags{}
 		
 			app := &cli.Command{
-				Name:    "cli-test",
-				Usage:   `A new project`,
-				Version: build(),
+				Name:                  "cli-test",
+				Usage:                 `A new project`,
+				Version:               build(),
+				EnableShellCompletion: true,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:        "log-level",
@@ -950,9 +874,15 @@ cli-test:  (type=dir)
 			app = commands.NewGoodbyeCmd(flags).Register(app)
 		
 			exitCode := 0
-			if err := app.Run(ctx, os.Args); err != nil {
-				fmt.Println()
-				printer.Ctx(ctx).FatalError(err)
+			if err := app.Run(context.Background(), os.Args); err != nil {
+				const colorRed = "\033[38;2;215;95;107m"
+				const colorGray = "\033[38;2;163;163;163m"
+				const colorReset = "\033[0m"
+				fmt.Fprintf(os.Stderr, "\n%s╭ Error%s\n%s│%s %s%s%s\n%s╵%s\n",
+					colorRed, colorReset,
+					colorRed, colorReset, colorGray, err.Error(), colorReset,
+					colorRed, colorReset,
+				)
 				exitCode = 1
 			}
 		
@@ -979,7 +909,7 @@ cli-test:  (type=dir)
 		  run:
 		    desc: Runs the main application and supports passing CLI args
 		    cmds:
-		      - go run *.go {{ .CLI_ARGS }}
+		      - go run . {{ .CLI_ARGS }}
 		    silent: false
 		
 		  build:
@@ -1014,8 +944,7 @@ cli-test:  (type=dir)
 		      - golangci-lint run ./...
 		
 		  fmt:
-		    desc: Runs golangci-lint fmt on the backend
-		    dir: backend
+		    desc: Runs golangci-lint fmt
 		    cmds:
 		      - golangci-lint fmt
 		

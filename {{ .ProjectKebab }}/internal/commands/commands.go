@@ -2,7 +2,13 @@ package commands
 
 import (
 	"context"
+{{- if .Scaffold.feature_json_output }}
+	"encoding/json"
+{{- end }}
 	"fmt"
+{{- if .Scaffold.feature_json_output }}
+	"os"
+{{- end }}
 
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v3"
@@ -36,6 +42,14 @@ func (cmd *{{ . | toTitleCase | replace "-" "" }}Cmd) Register(app *cli.Command)
 
 func (cmd *{{ . | toTitleCase | replace "-" "" }}Cmd) run(ctx context.Context, c *cli.Command) error {
 	log.Info().Msg("running {{ toKebabCase . }} command")
+
+{{- if $.Scaffold.feature_json_output }}
+	if cmd.flags.JSON {
+		return json.NewEncoder(os.Stdout).Encode(map[string]string{
+			"message": "Hello World!",
+		})
+	}
+{{- end }}
 
 	fmt.Println("Hello World!")
 

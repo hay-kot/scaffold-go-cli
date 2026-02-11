@@ -14,7 +14,12 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"{{ .Scaffold.gomod }}/internal/commands"
-	"{{ .Scaffold.gomod }}/internal/printer"
+{{- if .Scaffold.feature_config_file }}
+	"{{ .Scaffold.gomod }}/internal/config"
+{{- end }}
+{{- if .Scaffold.feature_file_logging }}
+	"{{ .Scaffold.gomod }}/internal/paths"
+{{- end }}
 )
 
 var (
@@ -68,39 +73,27 @@ func setupLogger(level string, logFile string) error {
 }
 {{- else }}
 func setupLogger(level string) error {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-
 	parsedLevel, err := zerolog.ParseLevel(level)
 	if err != nil {
 		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
-	log.Logger = log.Level(parsedLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).Level(parsedLevel)
 
 	return nil
 }
 {{- end }}
 
 func main() {
-{{- if .Scaffold.feature_file_logging }}
-	if err := setupLogger("info", ""); err != nil {
-		panic(err)
-	}
-{{- else }}
-	if err := setupLogger("info"); err != nil {
-		panic(err)
-	}
-{{- end }}
-
-	p := printer.New(os.Stderr)
-	ctx := printer.NewContext(context.Background(), p)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	flags := &commands.Flags{}
 
 	app := &cli.Command{
-		Name:    "{{ .Project }}",
-		Usage:   `{{ .Scaffold.description }}`,
-		Version: build(),
+		Name:                  "{{ .Project }}",
+		Usage:                 `{{ .Scaffold.description }}`,
+		Version:               build(),
+		EnableShellCompletion: true,
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "log-level",
@@ -117,10 +110,50 @@ func main() {
 				Destination: &flags.LogFile,
 			},
 {{- end }}
+{{- if .Scaffold.feature_config_file }}
+			&cli.StringFlag{
+				Name:        "config",
+				Usage:       "path to config file",
+				Sources:     cli.EnvVars("CONFIG_FILE"),
+				Destination: &flags.ConfigFile,
+			},
+{{- end }}
+{{- if .Scaffold.feature_json_output }}
+			&cli.BoolFlag{
+				Name:        "json",
+				Usage:       "output in JSON format",
+				Destination: &flags.JSON,
+			},
+{{- end }}
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
+{{- if .Scaffold.feature_config_file }}
+			cfg, err := func() (config.Config, error) {
+				if flags.ConfigFile != "" {
+					return config.ReadFrom(flags.ConfigFile)
+				}
+				return config.Read()
+			}()
+			if err != nil {
+				return ctx, fmt.Errorf("loading config: %w", err)
+			}
+
+			if flags.LogLevel == "info" && cfg.LogLevel != "" {
+				flags.LogLevel = cfg.LogLevel
+			}
 {{- if .Scaffold.feature_file_logging }}
-			if err := setupLogger(flags.LogLevel, flags.LogFile); err != nil {
+			if flags.LogFile == "" && cfg.LogFile != "" {
+				flags.LogFile = cfg.LogFile
+			}
+{{- end }}
+{{- end }}
+{{- if .Scaffold.feature_file_logging }}
+			logFile := flags.LogFile
+			if logFile == "" {
+				logFile = filepath.Join(paths.DataDir(), "{{ .Scaffold.gomod | pathBase }}.log")
+			}
+
+			if err := setupLogger(flags.LogLevel, logFile); err != nil {
 				return ctx, err
 			}
 {{- else }}
@@ -138,9 +171,15 @@ func main() {
 {{- end }}
 
 	exitCode := 0
-	if err := app.Run(ctx, os.Args); err != nil {
-		fmt.Println()
-		printer.Ctx(ctx).FatalError(err)
+	if err := app.Run(context.Background(), os.Args); err != nil {
+		const colorRed = "\033[38;2;215;95;107m"
+		const colorGray = "\033[38;2;163;163;163m"
+		const colorReset = "\033[0m"
+		fmt.Fprintf(os.Stderr, "\n%s╭ Error%s\n%s│%s %s%s%s\n%s╵%s\n",
+			colorRed, colorReset,
+			colorRed, colorReset, colorGray, err.Error(), colorReset,
+			colorRed, colorReset,
+		)
 		exitCode = 1
 	}
 

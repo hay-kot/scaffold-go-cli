@@ -7,7 +7,7 @@ tasks:
   run:
     desc: Runs the main application and supports passing CLI args
     cmds:
-      - go run *.go {{ .CLI_ARGS }}
+      - go run . {{ .CLI_ARGS }}
     silent: false
 
   build:
@@ -42,8 +42,7 @@ tasks:
       - golangci-lint run ./...
 
   fmt:
-    desc: Runs golangci-lint fmt on the backend
-    dir: backend
+    desc: Runs golangci-lint fmt
     cmds:
       - golangci-lint fmt
 

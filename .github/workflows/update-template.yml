@@ -1,0 +1,57 @@
+name: Update Template Dependencies
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Every Monday at 9am UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "stable"
+
+      - name: Install scaffold
+        run: go install github.com/hay-kot/scaffold@latest
+
+      - name: Update Go dependencies
+        run: ./scripts/update-deps.sh
+
+      - name: Update GitHub Action versions
+        run: ./scripts/update-actions.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update snapshot
+        run: make test/snapshot/update
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create pull request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/update-template-deps
+          commit-message: "chore: update template dependencies"
+          title: "chore: update template dependencies"
+          body: |
+            Automated update of template dependencies:
+            - Go module dependencies (`go mod tidy`)
+            - GitHub Action versions (major version bumps)
+            - Regenerated snapshot
+          delete-branch: true

@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://hay-kot.github.io/scaffold/schema.json
 metadata:
-  minumum_version: v0.6.1
+  minimum_version: v0.6.1
 messages:
   pre: |
     # Go urfave/cli/v3 Project Scaffold
@@ -97,6 +97,18 @@ questions:
       confirm: "Enable File Logging"
       description: "Add support for logging to files"
       default: false
+  - name: "feature_config_file"
+    group: "features"
+    prompt:
+      confirm: "Enable Config File"
+      description: "Add YAML config file support (~/.config/<app>/config.yaml)"
+      default: false
+  - name: "feature_json_output"
+    group: "features"
+    prompt:
+      confirm: "Enable JSON Output"
+      description: "Add a global --json flag for machine-readable output"
+      default: false
 
   - name: "docker_registry_url"
     group: "docker"
@@ -145,6 +157,8 @@ presets:
     feature_docker: true
     feature_release_drafter: true
     feature_file_logging: false
+    feature_config_file: false
+    feature_json_output: false
     docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
     feature_homebrew_tap: true
     homebrew_owner: "hay-kot"
@@ -163,3 +177,6 @@ features:
   - value: "{{ .Scaffold.feature_gh_actions }}"
     globs:
       - "**/workflows/**.yml"
+  - value: "{{ .Scaffold.feature_config_file }}"
+    globs:
+      - "**/config/*.go"

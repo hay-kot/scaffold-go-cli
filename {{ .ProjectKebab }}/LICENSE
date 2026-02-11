@@ -79,7 +79,7 @@ limitations under the License.
 GNU GENERAL PUBLIC LICENSE
                       Version 3, 29 June 2007
 
-    {{ .Scaffold.project_short_description }}
+    {{ .Scaffold.description }}
     Copyright (C) {{ now | date "2006-01-02" }}  {{ .Scaffold.full_name }}
 
     This program is free software: you can redistribute it and/or modify
