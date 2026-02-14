@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 {{- if .Scaffold.feature_file_logging }}
 	"io"
 	"path/filepath"
@@ -172,7 +174,10 @@ func main() {
 	// +scaffold:command:register
 
 	exitCode := 0
-	if err := app.Run(context.Background(), os.Args); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := app.Run(ctx, os.Args); err != nil {
 		const colorRed = "\033[38;2;215;95;107m"
 		const colorGray = "\033[38;2;163;163;163m"
 		const colorReset = "\033[0m"

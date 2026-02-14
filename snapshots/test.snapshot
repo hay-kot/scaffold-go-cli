@@ -897,6 +897,8 @@ cli-test:  (type=dir)
 			"context"
 			"fmt"
 			"os"
+			"os/signal"
+			"syscall"
 		
 			"github.com/rs/zerolog"
 			"github.com/rs/zerolog/log"
@@ -963,7 +965,10 @@ cli-test:  (type=dir)
 			// +scaffold:command:register
 		
 			exitCode := 0
-			if err := app.Run(context.Background(), os.Args); err != nil {
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+		
+			if err := app.Run(ctx, os.Args); err != nil {
 				const colorRed = "\033[38;2;215;95;107m"
 				const colorGray = "\033[38;2;163;163;163m"
 				const colorReset = "\033[0m"
