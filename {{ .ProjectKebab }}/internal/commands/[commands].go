@@ -2,11 +2,11 @@ package commands
 
 import (
 	"context"
-{{- if .Scaffold.feature_json_output }}
+{{- if .Computed.feature_json_output }}
 	"encoding/json"
 {{- end }}
 	"fmt"
-{{- if .Scaffold.feature_json_output }}
+{{- if .Computed.feature_json_output }}
 	"os"
 {{- end }}
 
@@ -41,7 +41,7 @@ func (cmd *{{ .Each.Item | toTitleCase | replace "-" "" }}Cmd) Register(app *cli
 func (cmd *{{ .Each.Item | toTitleCase | replace "-" "" }}Cmd) run(ctx context.Context, c *cli.Command) error {
 	log.Info().Msg("running {{ toKebabCase .Each.Item }} command")
 
-{{- if .Scaffold.feature_json_output }}
+{{- if .Computed.feature_json_output }}
 	if cmd.flags.JSON {
 		return json.NewEncoder(os.Stdout).Encode(map[string]string{
 			"message": "Hello World!",

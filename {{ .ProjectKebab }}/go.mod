@@ -5,7 +5,7 @@ go 1.26
 require (
 	github.com/rs/zerolog v1.33.0
 	github.com/urfave/cli/v3 v3.6.2
-{{- if .Scaffold.feature_config_file }}
+{{- if .Computed.feature_config_file }}
 	gopkg.in/yaml.v3 v3.0.1
 {{- end }}
 )

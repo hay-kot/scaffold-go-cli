@@ -13,7 +13,7 @@ import (
 // Config holds the application configuration loaded from a YAML file.
 type Config struct {
 	LogLevel string `yaml:"log_level"`
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 	LogFile  string `yaml:"log_file"`
 {{- end }}
 }

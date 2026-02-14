@@ -47,7 +47,7 @@ changelog:
       - "^docs:"
       - "^test:"
 
-[[ if .Scaffold.feature_homebrew_tap ]]
+[[ if .Computed.feature_homebrew_tap ]]
 brews:
   - repository:
       owner: "[[ .Scaffold.homebrew_owner ]]"
@@ -62,7 +62,7 @@ brews:
       system "#{bin}/[[ .Scaffold.gomod | pathBase ]] version"
 [[ end ]]
 
-[[ if .Scaffold.feature_docker ]]
+[[ if .Computed.feature_docker ]]
 dockers:
   - use: buildx
     goos: linux

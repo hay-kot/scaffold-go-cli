@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 	"io"
 	"path/filepath"
 {{- end }}
@@ -16,10 +16,10 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"{{ .Scaffold.gomod }}/internal/commands"
-{{- if .Scaffold.feature_config_file }}
+{{- if .Computed.feature_config_file }}
 	"{{ .Scaffold.gomod }}/internal/config"
 {{- end }}
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 	"{{ .Scaffold.gomod }}/internal/paths"
 {{- end }}
 )
@@ -40,7 +40,7 @@ func build() string {
 	return fmt.Sprintf("%s (%s) %s", version, short, date)
 }
 
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 func setupLogger(level string, logFile string) error {
 	parsedLevel, err := zerolog.ParseLevel(level)
 	if err != nil {
@@ -104,7 +104,7 @@ func main() {
 				Value:       "info",
 				Destination: &flags.LogLevel,
 			},
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 			&cli.StringFlag{
 				Name:        "log-file",
 				Usage:       "path to log file (optional)",
@@ -112,7 +112,7 @@ func main() {
 				Destination: &flags.LogFile,
 			},
 {{- end }}
-{{- if .Scaffold.feature_config_file }}
+{{- if .Computed.feature_config_file }}
 			&cli.StringFlag{
 				Name:        "config",
 				Usage:       "path to config file",
@@ -120,7 +120,7 @@ func main() {
 				Destination: &flags.ConfigFile,
 			},
 {{- end }}
-{{- if .Scaffold.feature_json_output }}
+{{- if .Computed.feature_json_output }}
 			&cli.BoolFlag{
 				Name:        "json",
 				Usage:       "output in JSON format",
@@ -129,7 +129,7 @@ func main() {
 {{- end }}
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
-{{- if .Scaffold.feature_config_file }}
+{{- if .Computed.feature_config_file }}
 			cfg, err := func() (config.Config, error) {
 				if flags.ConfigFile != "" {
 					return config.ReadFrom(flags.ConfigFile)
@@ -143,13 +143,13 @@ func main() {
 			if flags.LogLevel == "info" && cfg.LogLevel != "" {
 				flags.LogLevel = cfg.LogLevel
 			}
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 			if flags.LogFile == "" && cfg.LogFile != "" {
 				flags.LogFile = cfg.LogFile
 			}
 {{- end }}
 {{- end }}
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 			logFile := flags.LogFile
 			if logFile == "" {
 				logFile = filepath.Join(paths.DataDir(), "{{ .Scaffold.gomod | pathBase }}.log")
