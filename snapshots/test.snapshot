@@ -584,6 +584,83 @@ cli-test:  (type=dir)
 		# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 		# vim: set ts=2 sw=2 tw=0 fo=cnqoj
 		
+	.scaffold:  (type=dir)
+		command:  (type=dir)
+			scaffold.yaml:  (type=file)
+				# yaml-language-server: $schema=https://hay-kot.github.io/scaffold/schema.json
+				questions:
+				  - name: "command_name"
+				    prompt:
+				      message: "Command Name"
+				      description: "kebab-case command name"
+				    validate:
+				      required: true
+				      match:
+				        regex: "^[a-z]+(-[a-z]+)*$"
+				        message: "must be kebab-case"
+				
+				rewrites:
+				  - from: templates/internal/commands/command.go
+				    to: "internal/commands/{{ .Scaffold.command_name }}.go"
+				
+				inject:
+				  - name: "register command"
+				    path: main.go
+				    at: "// +scaffold:command:register"
+				    mode: after
+				    template: |
+				      app = commands.New{{ .Scaffold.command_name | toPascalCase }}Cmd(flags).Register(app)
+				
+				presets:
+				  default:
+				    command_name: "example"
+				
+			templates:  (type=dir)
+				internal:  (type=dir)
+					commands:  (type=dir)
+						command.go:  (type=file)
+							package commands
+							
+							import (
+								"context"
+								"fmt"
+							
+								"github.com/rs/zerolog/log"
+								"github.com/urfave/cli/v3"
+							)
+							
+							// {{ .Scaffold.command_name | toPascalCase }}Cmd implements the {{ .Scaffold.command_name }} command
+							type {{ .Scaffold.command_name | toPascalCase }}Cmd struct {
+								flags *Flags
+							}
+							
+							// New{{ .Scaffold.command_name | toPascalCase }}Cmd creates a new {{ .Scaffold.command_name }} command
+							func New{{ .Scaffold.command_name | toPascalCase }}Cmd(flags *Flags) *{{ .Scaffold.command_name | toPascalCase }}Cmd {
+								return &{{ .Scaffold.command_name | toPascalCase }}Cmd{flags: flags}
+							}
+							
+							// Register adds the {{ .Scaffold.command_name }} command to the application
+							func (cmd *{{ .Scaffold.command_name | toPascalCase }}Cmd) Register(app *cli.Command) *cli.Command {
+								app.Commands = append(app.Commands, &cli.Command{
+									Name:  "{{ .Scaffold.command_name }}",
+									Usage: "{{ .Scaffold.command_name }} command",
+									Flags: []cli.Flag{
+										// Add command-specific flags here
+									},
+									Action: cmd.run,
+								})
+							
+								return app
+							}
+							
+							func (cmd *{{ .Scaffold.command_name | toPascalCase }}Cmd) run(ctx context.Context, c *cli.Command) error {
+								log.Info().Msg("running {{ .Scaffold.command_name }} command")
+							
+								fmt.Println("Hello World!")
+							
+								return nil
+							}
+							
 	Dockerfile:  (type=file)
 		FROM gcr.io/distroless/static
 		ENTRYPOINT ["/project"]
@@ -592,7 +669,7 @@ cli-test:  (type=dir)
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2026-02-11, John Doe
+		Copyright (c) 2026-02-14, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -675,7 +752,59 @@ cli-test:  (type=dir)
 		
 	internal:  (type=dir)
 		commands:  (type=dir)
-			commands.go:  (type=file)
+			flags.go:  (type=file)
+				package commands
+				
+				// Flags holds global flags shared across all commands
+				type Flags struct {
+					LogLevel string
+					NoColor  bool
+				}
+				
+			goodbye.go:  (type=file)
+				package commands
+				
+				import (
+					"context"
+					"fmt"
+				
+					"github.com/rs/zerolog/log"
+					"github.com/urfave/cli/v3"
+				)
+				
+				// GoodbyeCmd implements the goodbye command
+				type GoodbyeCmd struct {
+					flags *Flags
+				}
+				
+				// NewGoodbyeCmd creates a new goodbye command
+				func NewGoodbyeCmd(flags *Flags) *GoodbyeCmd {
+					return &GoodbyeCmd{flags: flags}
+				}
+				
+				// Register adds the goodbye command to the application
+				func (cmd *GoodbyeCmd) Register(app *cli.Command) *cli.Command {
+					app.Commands = append(app.Commands, &cli.Command{
+						Name:  "goodbye",
+						Usage: "goodbye command",
+						Flags: []cli.Flag{
+							// Add command-specific flags here
+						},
+						Action: cmd.run,
+					})
+				
+					return app
+				}
+				
+				func (cmd *GoodbyeCmd) run(ctx context.Context, c *cli.Command) error {
+					log.Info().Msg("running goodbye command")
+				
+					fmt.Println("Hello World!")
+				
+					return nil
+				}
+				
+			hello.go:  (type=file)
 				package commands
 				
 				import (
@@ -716,46 +845,6 @@ cli-test:  (type=dir)
 					fmt.Println("Hello World!")
 				
 					return nil
-				}
-				
-				// GoodbyeCmd implements the goodbye command
-				type GoodbyeCmd struct {
-					flags *Flags
-				}
-				
-				// NewGoodbyeCmd creates a new goodbye command
-				func NewGoodbyeCmd(flags *Flags) *GoodbyeCmd {
-					return &GoodbyeCmd{flags: flags}
-				}
-				
-				// Register adds the goodbye command to the application
-				func (cmd *GoodbyeCmd) Register(app *cli.Command) *cli.Command {
-					app.Commands = append(app.Commands, &cli.Command{
-						Name:  "goodbye",
-						Usage: "goodbye command",
-						Flags: []cli.Flag{
-							// Add command-specific flags here
-						},
-						Action: cmd.run,
-					})
-				
-					return app
-				}
-				
-				func (cmd *GoodbyeCmd) run(ctx context.Context, c *cli.Command) error {
-					log.Info().Msg("running goodbye command")
-				
-					fmt.Println("Hello World!")
-				
-					return nil
-				}
-				
-			flags.go:  (type=file)
-				package commands
-				
-				// Flags holds global flags shared across all commands
-				type Flags struct {
-					LogLevel string
 				}
 				
 		paths:  (type=dir)
@@ -809,6 +898,8 @@ cli-test:  (type=dir)
 			"context"
 			"fmt"
 			"os"
+			"os/signal"
+			"syscall"
 		
 			"github.com/rs/zerolog"
 			"github.com/rs/zerolog/log"
@@ -832,13 +923,13 @@ cli-test:  (type=dir)
 		
 			return fmt.Sprintf("%s (%s) %s", version, short, date)
 		}
-		func setupLogger(level string) error {
+		func setupLogger(level string, noColor bool) error {
 			parsedLevel, err := zerolog.ParseLevel(level)
 			if err != nil {
 				return fmt.Errorf("failed to parse log level: %w", err)
 			}
 		
-			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).Level(parsedLevel)
+			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor}).Level(parsedLevel)
 		
 			return nil
 		}
@@ -861,9 +952,15 @@ cli-test:  (type=dir)
 						Value:       "info",
 						Destination: &flags.LogLevel,
 					},
+					&cli.BoolFlag{
+						Name:        "no-color",
+						Usage:       "disable colored output",
+						Sources:     cli.EnvVars("NO_COLOR"),
+						Destination: &flags.NoColor,
+					},
 				},
 				Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
-					if err := setupLogger(flags.LogLevel); err != nil {
+					if err := setupLogger(flags.LogLevel, flags.NoColor); err != nil {
 						return ctx, err
 					}
 		
@@ -872,12 +969,21 @@ cli-test:  (type=dir)
 			}
 			app = commands.NewHelloCmd(flags).Register(app)
 			app = commands.NewGoodbyeCmd(flags).Register(app)
+			// +scaffold:command:register
 		
 			exitCode := 0
-			if err := app.Run(context.Background(), os.Args); err != nil {
-				const colorRed = "\033[38;2;215;95;107m"
-				const colorGray = "\033[38;2;163;163;163m"
-				const colorReset = "\033[0m"
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+		
+			if err := app.Run(ctx, os.Args); err != nil {
+				colorRed := "\033[38;2;215;95;107m"
+				colorGray := "\033[38;2;163;163;163m"
+				colorReset := "\033[0m"
+				if flags.NoColor {
+					colorRed = ""
+					colorGray = ""
+					colorReset = ""
+				}
 				fmt.Fprintf(os.Stderr, "\n%s╭ Error%s\n%s│%s %s%s%s\n%s╵%s\n",
 					colorRed, colorReset,
 					colorRed, colorReset, colorGray, err.Error(), colorReset,

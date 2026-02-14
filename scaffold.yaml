@@ -16,28 +16,32 @@ messages:
     ```
 skip:
   - "*taskfile.yml"
+  - "**/.scaffold/**/*.go"
+
+each:
+  - commands
 
 questions:
   - name: "gomod"
-    group: "general"
+    group: "default"
     prompt:
       message: "Go Module Path"
       description: "e.g. github.com/username/project"
   - name: "full_name"
-    group: "general"
+    group: "default"
     prompt:
       message: "Developers Name"
       description: "For License and README"
     required: true
   - name: "description"
-    group: "general"
+    group: "default"
     prompt:
       message: "Description"
       description: "A short description of the project"
       multi: true
     required: true
   - name: "open_source_license"
-    group: "general"
+    group: "default"
     prompt:
       message: "License"
       description: "Choose a license for your project"
@@ -50,7 +54,7 @@ questions:
         - "GNU General Public License v3"
 
   - name: "commands"
-    group: "general"
+    group: "cli"
     prompt:
       message: "Commands"
       description: "List of commands to generate (kebab case)"
@@ -61,58 +65,43 @@ questions:
         regex: "^[a-z]+(-[a-z]+)*$"
         message: "inputs must be in kebab-case"
 
-  - name: "feature_gh_actions"
-    group: "features"
+  - name: "features_cicd"
+    group: "cli"
     prompt:
-      confirm: "Github Actions"
-      default: true
-      description: "Do you want to use github actions?"
-  - name: "feature_docker"
-    group: "features"
+      message: "CI/CD"
+      description: "Select CI/CD features to enable"
+      multi: true
+      default: ["Github Actions", "Renovate", "Release Drafter"]
+      options:
+        - "Github Actions"
+        - "Renovate"
+        - "Release Drafter"
+
+  - name: "features_publishing"
+    group: "cli"
     prompt:
-      confirm: "Publish Docker Images"
-      default: true
-      description: "Do you want to publish docker images?"
-  - name: "feature_homebrew_tap"
-    group: "features"
+      message: "Publishing"
+      description: "Select publishing targets"
+      multi: true
+      default: ["Docker", "Homebrew Tap"]
+      options:
+        - "Docker"
+        - "Homebrew Tap"
+
+  - name: "features_cli"
+    group: "cli"
     prompt:
-      confirm: "Publish Homebrew Tap"
-      default: true
-      description: "Do you want to publish a homebrew tap?"
-  - name: "feature_renovate"
-    group: "features"
-    prompt:
-      confirm: "Enable Renovate?"
-      description: "Automatically update dependencies, via Renovate"
-      default: true
-  - name: "feature_release_drafter"
-    group: "features"
-    prompt:
-      confirm: "Enable Release Draft"
-      description: "Automatically draft release notes, via Release Drafter"
-      default: true
-  - name: "feature_file_logging"
-    group: "features"
-    prompt:
-      confirm: "Enable File Logging"
-      description: "Add support for logging to files"
-      default: false
-  - name: "feature_config_file"
-    group: "features"
-    prompt:
-      confirm: "Enable Config File"
-      description: "Add YAML config file support (~/.config/<app>/config.yaml)"
-      default: false
-  - name: "feature_json_output"
-    group: "features"
-    prompt:
-      confirm: "Enable JSON Output"
-      description: "Add a global --json flag for machine-readable output"
-      default: false
+      message: "CLI Features"
+      description: "Select CLI features to enable"
+      multi: true
+      options:
+        - "File Logging"
+        - "Config File"
+        - "JSON Output"
 
   - name: "docker_registry_url"
     group: "docker"
-    when: "{{ .feature_docker }}"
+    when: '{{ has "Docker" .features_publishing }}'
     prompt:
       message: "Docker Registry"
       description: "Registry package url (e.g ghcr.io/hay-kot/scaffold)"
@@ -120,17 +109,27 @@ questions:
 
   - name: "homebrew_owner"
     group: "homebrew_tap"
-    when: "{{ .feature_homebrew_tap }}"
+    when: '{{ has "Homebrew Tap" .features_publishing }}'
     prompt:
       message: "Homebrew Tap Owner"
       description: "Tap repository owner"
   - name: "homebrew_name"
     group: "homebrew_tap"
-    when: "{{ .feature_homebrew_tap }}"
+    when: '{{ has "Homebrew Tap" .features_publishing }}'
     prompt:
       message: "Homebrew Tap Name"
       description: "e.g. homebrew-scaffold-tap"
       default: "homebrew-"
+
+computed:
+  feature_gh_actions: '{{ has "Github Actions" .Scaffold.features_cicd }}'
+  feature_renovate: '{{ has "Renovate" .Scaffold.features_cicd }}'
+  feature_release_drafter: '{{ has "Release Drafter" .Scaffold.features_cicd }}'
+  feature_docker: '{{ has "Docker" .Scaffold.features_publishing }}'
+  feature_homebrew_tap: '{{ has "Homebrew Tap" .Scaffold.features_publishing }}'
+  feature_file_logging: '{{ has "File Logging" .Scaffold.features_cli }}'
+  feature_config_file: '{{ has "Config File" .Scaffold.features_cli }}'
+  feature_json_output: '{{ has "JSON Output" .Scaffold.features_cli }}'
 
 delimiters:
   # since goreleaser uses go templates we can override the delimiters to make
@@ -152,15 +151,15 @@ presets:
     full_name: "John Doe"
     description: "A new project"
     open_source_license: "MIT license"
-    feature_gh_actions: true
-    feature_renovate: true
-    feature_docker: true
-    feature_release_drafter: true
-    feature_file_logging: false
-    feature_config_file: false
-    feature_json_output: false
+    features_cicd:
+      - "Github Actions"
+      - "Renovate"
+      - "Release Drafter"
+    features_publishing:
+      - "Docker"
+      - "Homebrew Tap"
+    features_cli: []
     docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
-    feature_homebrew_tap: true
     homebrew_owner: "hay-kot"
     homebrew_name: "homebrew-scaffold-go-cli-tap"
     commands:
@@ -168,15 +167,15 @@ presets:
       - "goodbye"
 
 features:
-  - value: "{{ .Scaffold.feature_renovate }}"
+  - value: "{{ .Computed.feature_renovate }}"
     globs:
       - "**/renovate.json"
-  - value: "{{ .Scaffold.feature_release_drafter }}"
+  - value: "{{ .Computed.feature_release_drafter }}"
     globs:
       - "**/*release-drafter.yml"
-  - value: "{{ .Scaffold.feature_gh_actions }}"
+  - value: "{{ .Computed.feature_gh_actions }}"
     globs:
       - "**/workflows/**.yml"
-  - value: "{{ .Scaffold.feature_config_file }}"
+  - value: "{{ .Computed.feature_config_file }}"
     globs:
       - "**/config/*.go"

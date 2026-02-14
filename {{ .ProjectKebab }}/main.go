@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-{{- if .Scaffold.feature_file_logging }}
+	"os/signal"
+	"syscall"
+{{- if .Computed.feature_file_logging }}
 	"io"
 	"path/filepath"
 {{- end }}
@@ -14,10 +16,10 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"{{ .Scaffold.gomod }}/internal/commands"
-{{- if .Scaffold.feature_config_file }}
+{{- if .Computed.feature_config_file }}
 	"{{ .Scaffold.gomod }}/internal/config"
 {{- end }}
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 	"{{ .Scaffold.gomod }}/internal/paths"
 {{- end }}
 )
@@ -38,14 +40,14 @@ func build() string {
 	return fmt.Sprintf("%s (%s) %s", version, short, date)
 }
 
-{{- if .Scaffold.feature_file_logging }}
-func setupLogger(level string, logFile string) error {
+{{- if .Computed.feature_file_logging }}
+func setupLogger(level string, logFile string, noColor bool) error {
 	parsedLevel, err := zerolog.ParseLevel(level)
 	if err != nil {
 		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
-	var output io.Writer = zerolog.ConsoleWriter{Out: os.Stderr}
+	var output io.Writer = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor}
 
 	if logFile != "" {
 		// Create log directory if it doesn't exist
@@ -62,7 +64,7 @@ func setupLogger(level string, logFile string) error {
 
 		// Write to both console and file
 		output = io.MultiWriter(
-			zerolog.ConsoleWriter{Out: os.Stderr},
+			zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor},
 			file,
 		)
 	}
@@ -72,13 +74,13 @@ func setupLogger(level string, logFile string) error {
 	return nil
 }
 {{- else }}
-func setupLogger(level string) error {
+func setupLogger(level string, noColor bool) error {
 	parsedLevel, err := zerolog.ParseLevel(level)
 	if err != nil {
 		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).Level(parsedLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor}).Level(parsedLevel)
 
 	return nil
 }
@@ -102,7 +104,13 @@ func main() {
 				Value:       "info",
 				Destination: &flags.LogLevel,
 			},
-{{- if .Scaffold.feature_file_logging }}
+			&cli.BoolFlag{
+				Name:        "no-color",
+				Usage:       "disable colored output",
+				Sources:     cli.EnvVars("NO_COLOR"),
+				Destination: &flags.NoColor,
+			},
+{{- if .Computed.feature_file_logging }}
 			&cli.StringFlag{
 				Name:        "log-file",
 				Usage:       "path to log file (optional)",
@@ -110,7 +118,7 @@ func main() {
 				Destination: &flags.LogFile,
 			},
 {{- end }}
-{{- if .Scaffold.feature_config_file }}
+{{- if .Computed.feature_config_file }}
 			&cli.StringFlag{
 				Name:        "config",
 				Usage:       "path to config file",
@@ -118,7 +126,7 @@ func main() {
 				Destination: &flags.ConfigFile,
 			},
 {{- end }}
-{{- if .Scaffold.feature_json_output }}
+{{- if .Computed.feature_json_output }}
 			&cli.BoolFlag{
 				Name:        "json",
 				Usage:       "output in JSON format",
@@ -127,7 +135,7 @@ func main() {
 {{- end }}
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
-{{- if .Scaffold.feature_config_file }}
+{{- if .Computed.feature_config_file }}
 			cfg, err := func() (config.Config, error) {
 				if flags.ConfigFile != "" {
 					return config.ReadFrom(flags.ConfigFile)
@@ -141,23 +149,23 @@ func main() {
 			if flags.LogLevel == "info" && cfg.LogLevel != "" {
 				flags.LogLevel = cfg.LogLevel
 			}
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 			if flags.LogFile == "" && cfg.LogFile != "" {
 				flags.LogFile = cfg.LogFile
 			}
 {{- end }}
 {{- end }}
-{{- if .Scaffold.feature_file_logging }}
+{{- if .Computed.feature_file_logging }}
 			logFile := flags.LogFile
 			if logFile == "" {
 				logFile = filepath.Join(paths.DataDir(), "{{ .Scaffold.gomod | pathBase }}.log")
 			}
 
-			if err := setupLogger(flags.LogLevel, logFile); err != nil {
+			if err := setupLogger(flags.LogLevel, logFile, flags.NoColor); err != nil {
 				return ctx, err
 			}
 {{- else }}
-			if err := setupLogger(flags.LogLevel); err != nil {
+			if err := setupLogger(flags.LogLevel, flags.NoColor); err != nil {
 				return ctx, err
 			}
 {{- end }}
@@ -169,12 +177,21 @@ func main() {
 {{- range .Scaffold.commands }}
 	app = commands.New{{ . | toTitleCase | replace "-" "" }}Cmd(flags).Register(app)
 {{- end }}
+	// +scaffold:command:register
 
 	exitCode := 0
-	if err := app.Run(context.Background(), os.Args); err != nil {
-		const colorRed = "\033[38;2;215;95;107m"
-		const colorGray = "\033[38;2;163;163;163m"
-		const colorReset = "\033[0m"
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := app.Run(ctx, os.Args); err != nil {
+		colorRed := "\033[38;2;215;95;107m"
+		colorGray := "\033[38;2;163;163;163m"
+		colorReset := "\033[0m"
+		if flags.NoColor {
+			colorRed = ""
+			colorGray = ""
+			colorReset = ""
+		}
 		fmt.Fprintf(os.Stderr, "\n%s╭ Error%s\n%s│%s %s%s%s\n%s╵%s\n",
 			colorRed, colorReset,
 			colorRed, colorReset, colorGray, err.Error(), colorReset,
