@@ -16,6 +16,10 @@ messages:
     ```
 skip:
   - "*taskfile.yml"
+  - "**/.scaffold/**/*.go"
+
+each:
+  - commands
 
 questions:
   - name: "gomod"

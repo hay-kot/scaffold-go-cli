@@ -169,6 +169,7 @@ func main() {
 {{- range .Scaffold.commands }}
 	app = commands.New{{ . | toTitleCase | replace "-" "" }}Cmd(flags).Register(app)
 {{- end }}
+	// +scaffold:command:register
 
 	exitCode := 0
 	if err := app.Run(context.Background(), os.Args); err != nil {
