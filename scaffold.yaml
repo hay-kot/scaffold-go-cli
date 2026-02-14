@@ -23,25 +23,25 @@ each:
 
 questions:
   - name: "gomod"
-    group: "general"
+    group: "default"
     prompt:
       message: "Go Module Path"
       description: "e.g. github.com/username/project"
   - name: "full_name"
-    group: "general"
+    group: "default"
     prompt:
       message: "Developers Name"
       description: "For License and README"
     required: true
   - name: "description"
-    group: "general"
+    group: "default"
     prompt:
       message: "Description"
       description: "A short description of the project"
       multi: true
     required: true
   - name: "open_source_license"
-    group: "general"
+    group: "default"
     prompt:
       message: "License"
       description: "Choose a license for your project"
@@ -54,7 +54,7 @@ questions:
         - "GNU General Public License v3"
 
   - name: "commands"
-    group: "general"
+    group: "cli"
     prompt:
       message: "Commands"
       description: "List of commands to generate (kebab case)"
@@ -66,7 +66,7 @@ questions:
         message: "inputs must be in kebab-case"
 
   - name: "features_cicd"
-    group: "features_cicd"
+    group: "cli"
     prompt:
       message: "CI/CD"
       description: "Select CI/CD features to enable"
@@ -78,7 +78,7 @@ questions:
         - "Release Drafter"
 
   - name: "features_publishing"
-    group: "features_publishing"
+    group: "cli"
     prompt:
       message: "Publishing"
       description: "Select publishing targets"
@@ -89,7 +89,7 @@ questions:
         - "Homebrew Tap"
 
   - name: "features_cli"
-    group: "features_cli"
+    group: "cli"
     prompt:
       message: "CLI Features"
       description: "Select CLI features to enable"
