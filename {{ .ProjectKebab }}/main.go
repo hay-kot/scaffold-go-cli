@@ -41,13 +41,13 @@ func build() string {
 }
 
 {{- if .Computed.feature_file_logging }}
-func setupLogger(level string, logFile string) error {
+func setupLogger(level string, logFile string, noColor bool) error {
 	parsedLevel, err := zerolog.ParseLevel(level)
 	if err != nil {
 		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
-	var output io.Writer = zerolog.ConsoleWriter{Out: os.Stderr}
+	var output io.Writer = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor}
 
 	if logFile != "" {
 		// Create log directory if it doesn't exist
@@ -64,7 +64,7 @@ func setupLogger(level string, logFile string) error {
 
 		// Write to both console and file
 		output = io.MultiWriter(
-			zerolog.ConsoleWriter{Out: os.Stderr},
+			zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor},
 			file,
 		)
 	}
@@ -74,13 +74,13 @@ func setupLogger(level string, logFile string) error {
 	return nil
 }
 {{- else }}
-func setupLogger(level string) error {
+func setupLogger(level string, noColor bool) error {
 	parsedLevel, err := zerolog.ParseLevel(level)
 	if err != nil {
 		return fmt.Errorf("failed to parse log level: %w", err)
 	}
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr}).Level(parsedLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor}).Level(parsedLevel)
 
 	return nil
 }
@@ -103,6 +103,12 @@ func main() {
 				Sources:     cli.EnvVars("LOG_LEVEL"),
 				Value:       "info",
 				Destination: &flags.LogLevel,
+			},
+			&cli.BoolFlag{
+				Name:        "no-color",
+				Usage:       "disable colored output",
+				Sources:     cli.EnvVars("NO_COLOR"),
+				Destination: &flags.NoColor,
 			},
 {{- if .Computed.feature_file_logging }}
 			&cli.StringFlag{
@@ -155,11 +161,11 @@ func main() {
 				logFile = filepath.Join(paths.DataDir(), "{{ .Scaffold.gomod | pathBase }}.log")
 			}
 
-			if err := setupLogger(flags.LogLevel, logFile); err != nil {
+			if err := setupLogger(flags.LogLevel, logFile, flags.NoColor); err != nil {
 				return ctx, err
 			}
 {{- else }}
-			if err := setupLogger(flags.LogLevel); err != nil {
+			if err := setupLogger(flags.LogLevel, flags.NoColor); err != nil {
 				return ctx, err
 			}
 {{- end }}
@@ -178,9 +184,14 @@ func main() {
 	defer stop()
 
 	if err := app.Run(ctx, os.Args); err != nil {
-		const colorRed = "\033[38;2;215;95;107m"
-		const colorGray = "\033[38;2;163;163;163m"
-		const colorReset = "\033[0m"
+		colorRed := "\033[38;2;215;95;107m"
+		colorGray := "\033[38;2;163;163;163m"
+		colorReset := "\033[0m"
+		if flags.NoColor {
+			colorRed = ""
+			colorGray = ""
+			colorReset = ""
+		}
 		fmt.Fprintf(os.Stderr, "\n%s╭ Error%s\n%s│%s %s%s%s\n%s╵%s\n",
 			colorRed, colorReset,
 			colorRed, colorReset, colorGray, err.Error(), colorReset,
