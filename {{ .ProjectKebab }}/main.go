@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 {{- if .Computed.feature_file_logging }}
 	"io"
@@ -32,6 +33,20 @@ var (
 )
 
 func build() string {
+	if version == "dev" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			version = info.Main.Version
+			for _, s := range info.Settings {
+				switch s.Key {
+				case "vcs.revision":
+					commit = s.Value
+				case "vcs.time":
+					date = s.Value
+				}
+			}
+		}
+	}
+
 	short := commit
 	if len(commit) > 7 {
 		short = commit[:7]

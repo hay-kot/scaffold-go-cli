@@ -99,89 +99,6 @@ cli-test:  (type=dir)
 			
 			- [ ] I have added tests that prove my fix is effective or that my feature works
 			- [ ] I have added necessary documentation (if appropriate)
-		release-drafter.yml:  (type=file)
-			---
-			name-template: "v$RESOLVED_VERSION"
-			tag-template: "v$RESOLVED_VERSION"
-			change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
-			sort-direction: ascending
-			
-			categories:
-			  - title: "🚨 Breaking changes"
-			    labels:
-			      - "breaking-change"
-			      - "major"
-			  - title: "✨ New features"
-			    labels:
-			      - "feature"
-			      - "minor"
-			  - title: "🐛 Bug fixes"
-			    labels:
-			      - "bugfix"
-			  - title: "🧰 Maintenance"
-			    collapse-after: 3
-			    labels:
-			      - "ci"
-			      - "chore"
-			  - title: "📚 Documentation"
-			    labels:
-			      - "documentation"
-			  - title: "⬆️ Dependency updates"
-			    collapse-after: 3
-			    labels:
-			      - "dependencies"
-			
-			exclude-labels:
-			  - "skip-changelog"
-			
-			version-resolver:
-			  major:
-			    labels:
-			      - "major"
-			      - "breaking-change"
-			  minor:
-			    labels:
-			      - "minor"
-			      - "feature"
-			  patch:
-			    labels:
-			      - "bugfix"
-			      - "chore"
-			      - "ci"
-			      - "dependencies"
-			      - "documentation"
-			  default: patch
-			
-			autolabeler:
-			  - label: "documentation"
-			    files:
-			      - "*.md"
-			    branch:
-			      - '/docs{0,1}\/.+/'
-			  - label: "bugfix"
-			    title:
-			      - "/fix: .+/i"
-			      - "/bug: .+/i"
-			    branch:
-			      - '/fix\/.+/'
-			      - '/bug\/.+/'
-			  - label: "feature"
-			    title:
-			      - "/feat: .+/i"
-			    branch:
-			      - '/feature\/.+/'
-			      - '/feat\/.+/'
-			    body:
-			      - '/implements #\d+/i'
-			  - label: "breaking-change"
-			    title:
-			      - "/breaking change: .+/i"
-			
-			template: |
-			  ## Changes
-			
-			  $CHANGES
-			
 		workflows:  (type=dir)
 			partial-tests.yml:  (type=file)
 				name: Go Build/Test
@@ -303,49 +220,7 @@ cli-test:  (type=dir)
 				          args: release --clean
 				        env:
 				          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-				
-			release-drafter.yml:  (type=file)
-				name: Release Drafter
-				
-				on:
-				  push:
-				    # branches to consider in the event; optional, defaults to all
-				    branches:
-				      - main
-				  # pull_request event is required only for autolabeler
-				  pull_request:
-				    # Only following types are handled by the action, but one can default to all as well
-				    types: [opened, reopened, synchronize]
-				  # pull_request_target event is required for autolabeler to support PRs from forks
-				  # pull_request_target:
-				  #   types: [opened, reopened, synchronize]
-				
-				permissions:
-				  contents: read
-				
-				jobs:
-				  update_release_draft:
-				    permissions:
-				      # write permission is required to create a github release
-				      contents: write
-				      # write permission is required for autolabeler
-				      # otherwise, read permission is required at least
-				      pull-requests: write
-				    runs-on: ubuntu-latest
-				    steps:
-				      # (Optional) GitHub Enterprise requires GHE_HOST variable set
-				      #- name: Set GHE_HOST
-				      #  run: |
-				      #    echo "GHE_HOST=${GITHUB_SERVER_URL##https:\/\/}" >> $GITHUB_ENV
-				
-				      # Drafts your next Release notes as Pull Requests are merged into "main"
-				      - uses: release-drafter/release-drafter@v6
-				        # (Optional) specify config name to use, relative to .github/. Default: release-drafter.yml
-				        # with:
-				        #   config-name: my-config.yml
-				        #   disable-autolabeler: true
-				        env:
-				          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+				          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 				
 	.gitignore:  (type=file)
 		# If you prefer the allow list template instead of the deny list, see community template:
@@ -497,24 +372,36 @@ cli-test:  (type=dir)
 		
 		changelog:
 		  sort: asc
+		  groups:
+		    - title: Features
+		      regexp: '^.*?feat(\(\w+\))??!?:.+$'
+		      order: 0
+		    - title: Bug Fixes
+		      regexp: '^.*?fix(\(\w+\))??!?:.+$'
+		      order: 1
+		    - title: Documentation
+		      regexp: '^.*?docs(\(\w+\))??!?:.+$'
+		      order: 2
+		    - title: Other
+		      order: 999
 		  filters:
 		    exclude:
-		      - "^docs:"
 		      - "^test:"
+		      - "^chore:"
+		      - "^ci:"
 		
 		
-		brews:
+		homebrew_casks:
 		  - repository:
 		      owner: "hay-kot"
 		      name: "homebrew-scaffold-go-cli-tap"
+		      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
 		    description: "A new project"
-		    license: "MIT license"
+		    homepage: "https://github.com/username/project"
 		    dependencies:
-		      - name: go
+		      - formula: go
 		        type: optional
-		      - name: git
-		    test: |
-		      system "#{bin}/project version"
+		      - formula: git
 		
 		
 		
@@ -666,10 +553,49 @@ cli-test:  (type=dir)
 		ENTRYPOINT ["/project"]
 		COPY project /
 		
+	HOMEBREW_SETUP.md:  (type=file)
+		# Homebrew Tap Setup
+		
+		This project is configured to publish to a Homebrew tap via GoReleaser. Follow these steps to set it up.
+		
+		## 1. Create the Tap Repository
+		
+		Create a new GitHub repository named `homebrew-scaffold-go-cli-tap` under the `hay-kot` account. This repository will hold the Homebrew cask definitions that GoReleaser publishes.
+		
+		## 2. Generate a Personal Access Token (PAT)
+		
+		GoReleaser needs a PAT with write access to the tap repository (separate from `GITHUB_TOKEN` which is scoped to the source repo).
+		
+		1. Go to **GitHub Settings > Developer Settings > Personal Access Tokens > Fine-grained tokens**
+		2. Create a new token with:
+		   - **Repository access**: Select the `homebrew-scaffold-go-cli-tap` repository
+		   - **Permissions**: Contents (Read and write)
+		3. Copy the generated token
+		
+		## 3. Add the Secret to Your Source Repository
+		
+		1. Go to your source repository **Settings > Secrets and variables > Actions**
+		2. Click **New repository secret**
+		3. Name: `HOMEBREW_TAP_GITHUB_TOKEN`
+		4. Value: Paste the PAT from the previous step
+		
+		## 4. Verify
+		
+		After the next release, GoReleaser will push a cask definition to your tap repository. Users can then install with:
+		
+		```sh
+		brew tap hay-kot/scaffold-go-cli-tap
+		brew install project
+		```
+		
+		## References
+		
+		- [GoReleaser Homebrew Casks](https://goreleaser.com/customization/homebrew_casks/)
+		
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2026-02-14, John Doe
+		Copyright (c) 2026-02-15, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -899,6 +825,7 @@ cli-test:  (type=dir)
 			"fmt"
 			"os"
 			"os/signal"
+			"runtime/debug"
 			"syscall"
 		
 			"github.com/rs/zerolog"
@@ -916,6 +843,20 @@ cli-test:  (type=dir)
 		)
 		
 		func build() string {
+			if version == "dev" {
+				if info, ok := debug.ReadBuildInfo(); ok {
+					version = info.Main.Version
+					for _, s := range info.Settings {
+						switch s.Key {
+						case "vcs.revision":
+							commit = s.Value
+						case "vcs.time":
+							date = s.Value
+						}
+					}
+				}
+			}
+		
 			short := commit
 			if len(commit) > 7 {
 				short = commit[:7]

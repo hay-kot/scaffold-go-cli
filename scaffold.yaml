@@ -71,11 +71,10 @@ questions:
       message: "CI/CD"
       description: "Select CI/CD features to enable"
       multi: true
-      default: ["Github Actions", "Renovate", "Release Drafter"]
+      default: ["Github Actions", "Renovate"]
       options:
         - "Github Actions"
         - "Renovate"
-        - "Release Drafter"
 
   - name: "features_publishing"
     group: "cli"
@@ -124,7 +123,7 @@ questions:
 computed:
   feature_gh_actions: '{{ has "Github Actions" .Scaffold.features_cicd }}'
   feature_renovate: '{{ has "Renovate" .Scaffold.features_cicd }}'
-  feature_release_drafter: '{{ has "Release Drafter" .Scaffold.features_cicd }}'
+
   feature_docker: '{{ has "Docker" .Scaffold.features_publishing }}'
   feature_homebrew_tap: '{{ has "Homebrew Tap" .Scaffold.features_publishing }}'
   feature_file_logging: '{{ has "File Logging" .Scaffold.features_cli }}'
@@ -140,9 +139,6 @@ delimiters:
   - glob: "**/workflows/publish.yml"
     left: "[["
     right: "]]"
-  - glob: "**/workflows/release-drafter.yml"
-    left: "[["
-    right: "]]"
 
 presets:
   test:
@@ -154,7 +150,6 @@ presets:
     features_cicd:
       - "Github Actions"
       - "Renovate"
-      - "Release Drafter"
     features_publishing:
       - "Docker"
       - "Homebrew Tap"
@@ -170,12 +165,12 @@ features:
   - value: "{{ .Computed.feature_renovate }}"
     globs:
       - "**/renovate.json"
-  - value: "{{ .Computed.feature_release_drafter }}"
-    globs:
-      - "**/*release-drafter.yml"
   - value: "{{ .Computed.feature_gh_actions }}"
     globs:
       - "**/workflows/**.yml"
   - value: "{{ .Computed.feature_config_file }}"
     globs:
       - "**/config/*.go"
+  - value: "{{ .Computed.feature_homebrew_tap }}"
+    globs:
+      - "**/HOMEBREW_SETUP.md"
