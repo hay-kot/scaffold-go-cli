@@ -42,24 +42,36 @@ snapshot:
 
 changelog:
   sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(\w+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\(\w+\))??!?:.+$'
+      order: 1
+    - title: Documentation
+      regexp: '^.*?docs(\(\w+\))??!?:.+$'
+      order: 2
+    - title: Other
+      order: 999
   filters:
     exclude:
-      - "^docs:"
       - "^test:"
+      - "^chore:"
+      - "^ci:"
 
 [[ if .Computed.feature_homebrew_tap ]]
-brews:
+homebrew_casks:
   - repository:
       owner: "[[ .Scaffold.homebrew_owner ]]"
       name: "[[ .Scaffold.homebrew_name ]]"
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     description: "[[ .Scaffold.description ]]"
-    license: "[[ .Scaffold.open_source_license ]]"
+    homepage: "https://[[ .Scaffold.gomod ]]"
     dependencies:
-      - name: go
+      - formula: go
         type: optional
-      - name: git
-    test: |
-      system "#{bin}/[[ .Scaffold.gomod | pathBase ]] version"
+      - formula: git
 [[ end ]]
 
 [[ if .Computed.feature_docker ]]
