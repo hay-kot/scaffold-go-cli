@@ -9,11 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: "./go.mod"
-          cache: true
+      - name: Install tools
+        uses: jdx/mise-action@v2
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
