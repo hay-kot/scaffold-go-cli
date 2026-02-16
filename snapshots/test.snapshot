@@ -112,11 +112,8 @@ cli-test:  (type=dir)
 				    steps:
 				      - uses: actions/checkout@v5
 				
-				      - name: Set up Go
-				        uses: actions/setup-go@v6
-				        with:
-				          go-version-file: "./go.mod"
-				          cache: true
+				      - name: Install tools
+				        uses: jdx/mise-action@v2
 				
 				      - name: golangci-lint
 				        uses: golangci/golangci-lint-action@v9
@@ -595,7 +592,7 @@ cli-test:  (type=dir)
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2026-02-15, John Doe
+		Copyright (c) 2026-02-16, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -876,6 +873,10 @@ cli-test:  (type=dir)
 		}
 		
 		func main() {
+			os.Exit(run())
+		}
+		
+		func run() int {
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		
 			flags := &commands.Flags{}
@@ -912,7 +913,6 @@ cli-test:  (type=dir)
 			app = commands.NewGoodbyeCmd(flags).Register(app)
 			// +scaffold:command:register
 		
-			exitCode := 0
 			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
 		
@@ -930,11 +930,61 @@ cli-test:  (type=dir)
 					colorRed, colorReset, colorGray, err.Error(), colorReset,
 					colorRed, colorReset,
 				)
-				exitCode = 1
+				return 1
 			}
 		
-			os.Exit(exitCode)
+			return 0
 		}
+		
+	mise.toml:  (type=file)
+		[tools]
+		go = "latest"
+		golangci-lint = "latest"
+		goreleaser = "latest"
+		"github:gotestyourself/gotestsum" = "latest"
+		
+		[env]
+		LOG_LEVEL = "debug"
+		
+		[tasks.run]
+		description = "Run the main application"
+		run = "go run ."
+		
+		[tasks.build]
+		description = "Build the binary with goreleaser"
+		run = "goreleaser build --snapshot --clean"
+		
+		[tasks.test]
+		description = "Run all go tests using gotestsum"
+		run = "gotestsum ./..."
+		
+		[tasks."test:watch"]
+		description = "Run all go tests in watch mode"
+		run = "gotestsum --watch -- -v ./..."
+		
+		[tasks.coverage]
+		description = "Run tests with race detection and coverage"
+		run = "go test -race -coverprofile=coverage.out -covermode=atomic ./... -v -cover"
+		
+		[tasks.tidy]
+		description = "Run go mod tidy"
+		run = "go mod tidy"
+		
+		[tasks.lint]
+		description = "Run golangci-lint"
+		run = "golangci-lint run ./..."
+		
+		[tasks.fmt]
+		description = "Run golangci-lint fmt"
+		run = "golangci-lint fmt"
+		
+		[tasks.check]
+		description = "Run all checks for PRs (tidy, lint, test)"
+		run = [
+		    { task = "tidy" },
+		    { task = "lint" },
+		    { task = "test" },
+		]
 		
 	renovate.json:  (type=file)
 		{
@@ -946,60 +996,4 @@ cli-test:  (type=dir)
 		        "gomodTidy"
 		    ]
 		}
-	taskfile.yml:  (type=file)
-		version: "3"
-		
-		env:
-		  LOG_LEVEL: "debug"
-		
-		tasks:
-		  run:
-		    desc: Runs the main application and supports passing CLI args
-		    cmds:
-		      - go run . {{ .CLI_ARGS }}
-		    silent: false
-		
-		  build:
-		    desc: Builds the backend binary
-		    cmds:
-		      - goreleaser build --snapshot --clean
-		
-		  test:
-		    desc: Runs all go tests using gotestsum - supports passing gotestsum args
-		    cmds:
-		      - gotestsum {{ .CLI_ARGS }} ./...
-		
-		  test:watch:
-		    desc: Runs all go tests using gotestsum in watch mode
-		    cmds:
-		      - gotestsum --watch -- -v ./...
-		
-		  coverage:
-		    desc: Runs all go tests with -race flag and generates a coverage report
-		    cmds:
-		      - go test -race -coverprofile=coverage.out -covermode=atomic ./... -v -cover
-		    silent: true
-		
-		  tidy:
-		    desc: Runs go mod tidy on the backend
-		    cmds:
-		      - go mod tidy
-		
-		  lint:
-		    desc: Runs golangci-lint
-		    cmds:
-		      - golangci-lint run ./...
-		
-		  fmt:
-		    desc: Runs golangci-lint fmt
-		    cmds:
-		      - golangci-lint fmt
-		
-		  pr:
-		    desc: Runs all go test and lint related tasks for PRs
-		    cmds:
-		      - task: tidy
-		      - task: lint
-		      - task: test
-		
 

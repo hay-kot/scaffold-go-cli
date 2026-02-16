@@ -102,6 +102,10 @@ func setupLogger(level string, noColor bool) error {
 {{- end }}
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	flags := &commands.Flags{}
@@ -194,7 +198,6 @@ func main() {
 {{- end }}
 	// +scaffold:command:register
 
-	exitCode := 0
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -212,8 +215,8 @@ func main() {
 			colorRed, colorReset, colorGray, err.Error(), colorReset,
 			colorRed, colorReset,
 		)
-		exitCode = 1
+		return 1
 	}
 
-	os.Exit(exitCode)
+	return 0
 }

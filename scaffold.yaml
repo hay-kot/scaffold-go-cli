@@ -12,10 +12,10 @@ messages:
 
     ```sh
     cd {{ .ProjectKebab }}
-    task run -- hello
+    mise run run -- hello
     ```
 skip:
-  - "*taskfile.yml"
+  - "*mise.toml"
   - "**/.scaffold/**/*.go"
 
 each:
