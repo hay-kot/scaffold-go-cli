@@ -113,7 +113,7 @@ cli-test:  (type=dir)
 				      - uses: actions/checkout@v5
 				
 				      - name: Install tools
-				        uses: jdx/mise-action@v2
+				        uses: jdx/mise-action@v3
 				
 				      - name: golangci-lint
 				        uses: golangci/golangci-lint-action@v9
@@ -210,7 +210,7 @@ cli-test:  (type=dir)
 				          registry: ghcr.io
 				          username: ${{ github.actor }}
 				          password: ${{ secrets.GITHUB_TOKEN }}
-				      - uses: goreleaser/goreleaser-action@v6
+				      - uses: goreleaser/goreleaser-action@v7
 				        with:
 				          distribution: goreleaser
 				          version: latest
@@ -592,7 +592,7 @@ cli-test:  (type=dir)
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2026-02-16, John Doe
+		Copyright (c) 2026-02-23, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
