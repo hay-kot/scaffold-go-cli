@@ -23,3 +23,8 @@ jobs:
 
       - name: Test
         run: go test ./... -race
+{{- if .Computed.feature_docker_integration }}
+
+      - name: Integration Tests
+        run: mise run integration
+{{- end }}
