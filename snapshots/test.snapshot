@@ -127,6 +127,9 @@ cli-test:  (type=dir)
 				      - name: Test
 				        run: go test ./... -race
 				
+				      - name: Integration Tests
+				        run: mise run integration
+				
 			pr.yml:  (type=file)
 				name: pr
 				
@@ -592,7 +595,7 @@ cli-test:  (type=dir)
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2026-02-16, John Doe
+		Copyright (c) 2026-02-26, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -673,6 +676,149 @@ cli-test:  (type=dir)
 		gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 		gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 		
+	integration:  (type=dir)
+		Dockerfile:  (type=file)
+			FROM debian:bookworm-slim
+			
+			RUN apt-get update && apt-get install -y --no-install-recommends \
+			    ca-certificates \
+			    && rm -rf /var/lib/apt/lists/*
+			
+			COPY project /usr/local/bin/project
+			
+			ENTRYPOINT ["project"]
+			
+		integration_test.go:  (type=file)
+			//go:build integration
+			
+			package integration
+			
+			import (
+				"bytes"
+				"fmt"
+				"os"
+				"os/exec"
+				"strings"
+				"testing"
+			)
+			
+			const (
+				imageName = "project-integration"
+			)
+			
+			func TestMain(m *testing.M) {
+				if err := setup(); err != nil {
+					fmt.Fprintf(os.Stderr, "setup failed: %v\n", err)
+					os.Exit(1)
+				}
+			
+				code := m.Run()
+			
+				if err := teardown(); err != nil {
+					fmt.Fprintf(os.Stderr, "teardown failed: %v\n", err)
+				}
+			
+				os.Exit(code)
+			}
+			
+			func setup() error {
+				// Build the binary with goreleaser snapshot
+				cmd := exec.Command("goreleaser", "build", "--snapshot", "--clean", "--single-target")
+				cmd.Dir = ".."
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("goreleaser build: %w", err)
+				}
+			
+				// Find the built binary
+				binary, err := findBinary()
+				if err != nil {
+					return fmt.Errorf("find binary: %w", err)
+				}
+			
+				// Copy binary into integration directory for docker build context
+				input, err := os.ReadFile(binary)
+				if err != nil {
+					return fmt.Errorf("read binary: %w", err)
+				}
+			
+				if err := os.WriteFile("project", input, 0o755); err != nil {
+					return fmt.Errorf("write binary: %w", err)
+				}
+			
+				// Build docker image
+				cmd = exec.Command("docker", "build", "-t", imageName, ".")
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("docker build: %w", err)
+				}
+			
+				return nil
+			}
+			
+			func teardown() error {
+				// Remove copied binary
+				os.Remove("project")
+			
+				// Remove docker image
+				cmd := exec.Command("docker", "rmi", "-f", imageName)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				return cmd.Run()
+			}
+			
+			func findBinary() (string, error) {
+				// goreleaser places binaries in dist/<project>_<os>_<arch>/
+				entries, err := os.ReadDir("../dist")
+				if err != nil {
+					return "", fmt.Errorf("read dist: %w", err)
+				}
+			
+				for _, entry := range entries {
+					if !entry.IsDir() {
+						continue
+					}
+					candidate := fmt.Sprintf("../dist/%s/project", entry.Name())
+					if _, err := os.Stat(candidate); err == nil {
+						return candidate, nil
+					}
+				}
+			
+				return "", fmt.Errorf("no binary found in dist/")
+			}
+			
+			// runCLI executes the CLI binary inside the docker container with the given
+			// arguments and returns the combined stdout output.
+			func runCLI(args ...string) (string, error) {
+				cmdArgs := append([]string{"run", "--rm", imageName}, args...)
+				cmd := exec.Command("docker", cmdArgs...)
+			
+				var stdout, stderr bytes.Buffer
+				cmd.Stdout = &stdout
+				cmd.Stderr = &stderr
+			
+				if err := cmd.Run(); err != nil {
+					return "", fmt.Errorf("docker run failed: %w\nstderr: %s", err, stderr.String())
+				}
+			
+				return strings.TrimSpace(stdout.String()), nil
+			}
+			
+			func TestVersion(t *testing.T) {
+				out, err := runCLI("--version")
+				if err != nil {
+					t.Fatalf("failed to get version: %v", err)
+				}
+			
+				if out == "" {
+					t.Fatal("expected version output, got empty string")
+				}
+			
+				t.Logf("version output: %s", out)
+			}
+			
 	internal:  (type=dir)
 		commands:  (type=dir)
 			flags.go:  (type=file)
@@ -985,6 +1131,11 @@ cli-test:  (type=dir)
 		    { task = "lint" },
 		    { task = "test" },
 		]
+		
+		[tasks.integration]
+		description = "Run integration tests in Docker"
+		depends = ["build"]
+		run = "go test -tags integration -v -count=1 ./integration/..."
 		
 	renovate.json:  (type=file)
 		{
