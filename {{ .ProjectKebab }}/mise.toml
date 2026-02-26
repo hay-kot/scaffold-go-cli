@@ -46,3 +46,10 @@ run = [
     { task = "lint" },
     { task = "test" },
 ]
+{{- if .Computed.feature_docker_integration }}
+
+[tasks.integration]
+description = "Run integration tests in Docker"
+depends = ["build"]
+run = "go test -tags integration -v -count=1 ./integration/..."
+{{- end }}

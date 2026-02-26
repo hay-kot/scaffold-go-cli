@@ -15,7 +15,6 @@ messages:
     mise run run -- hello
     ```
 skip:
-  - "*mise.toml"
   - "**/.scaffold/**/*.go"
 
 each:
@@ -97,6 +96,7 @@ questions:
         - "File Logging"
         - "Config File"
         - "JSON Output"
+        - "Docker Integration Tests"
 
   - name: "docker_registry_url"
     group: "docker"
@@ -129,6 +129,7 @@ computed:
   feature_file_logging: '{{ has "File Logging" .Scaffold.features_cli }}'
   feature_config_file: '{{ has "Config File" .Scaffold.features_cli }}'
   feature_json_output: '{{ has "JSON Output" .Scaffold.features_cli }}'
+  feature_docker_integration: '{{ has "Docker Integration Tests" .Scaffold.features_cli }}'
 
 delimiters:
   # since goreleaser uses go templates we can override the delimiters to make
@@ -153,7 +154,8 @@ presets:
     features_publishing:
       - "Docker"
       - "Homebrew Tap"
-    features_cli: []
+    features_cli:
+      - "Docker Integration Tests"
     docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
     homebrew_owner: "hay-kot"
     homebrew_name: "homebrew-scaffold-go-cli-tap"
@@ -174,3 +176,6 @@ features:
   - value: "{{ .Computed.feature_homebrew_tap }}"
     globs:
       - "**/HOMEBREW_SETUP.md"
+  - value: "{{ .Computed.feature_docker_integration }}"
+    globs:
+      - "**/integration/**"
