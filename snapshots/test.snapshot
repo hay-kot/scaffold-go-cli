@@ -113,7 +113,7 @@ cli-test:  (type=dir)
 				      - uses: actions/checkout@v5
 				
 				      - name: Install tools
-				        uses: jdx/mise-action@v2
+				        uses: jdx/mise-action@v4
 				
 				      - name: golangci-lint
 				        uses: golangci/golangci-lint-action@v9
@@ -208,12 +208,12 @@ cli-test:  (type=dir)
 				        with:
 				          go-version-file: "go.mod"
 				          cache: true
-				      - uses: docker/login-action@v3
+				      - uses: docker/login-action@v4
 				        with:
 				          registry: ghcr.io
 				          username: ${{ github.actor }}
 				          password: ${{ secrets.GITHUB_TOKEN }}
-				      - uses: goreleaser/goreleaser-action@v6
+				      - uses: goreleaser/goreleaser-action@v7
 				        with:
 				          distribution: goreleaser
 				          version: latest
