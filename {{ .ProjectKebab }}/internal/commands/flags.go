@@ -4,6 +4,12 @@ package commands
 type Flags struct {
 	LogLevel string
 	NoColor  bool
+{{- if .Computed.feature_profiling }}
+	Pprof       bool
+	PprofAddr   string
+	CPUProfile  string
+	HeapProfile string
+{{- end }}
 {{- if .Computed.feature_file_logging }}
 	LogFile  string
 {{- end }}
