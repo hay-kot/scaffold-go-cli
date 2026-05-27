@@ -54,7 +54,7 @@ jobs:
           git checkout -B "$BRANCH_NAME"
           git add '{{ .ProjectKebab }}/go.mod' '{{ .ProjectKebab }}/go.sum' snapshots/test.snapshot .github/workflows/*.yml
           git commit -m "chore: update template dependencies"
-          git push --force-with-lease origin "$BRANCH_NAME"
+          git push --force origin "$BRANCH_NAME"
 
           if gh pr view "$BRANCH_NAME" --json number >/dev/null 2>&1; then
             gh pr edit "$BRANCH_NAME" \
