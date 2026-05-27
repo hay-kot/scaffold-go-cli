@@ -44,14 +44,38 @@ jobs:
 
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          branch: chore/update-template-deps
-          commit-message: "chore: update template dependencies"
-          title: "chore: update template dependencies"
-          body: |
-            Automated update of template dependencies:
-            - Go module dependencies (`go mod tidy`)
-            - GitHub Action versions (major version bumps)
-            - Regenerated snapshot
-          delete-branch: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: chore/update-template-deps
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B "$BRANCH_NAME"
+          git add '{{ .ProjectKebab }}/go.mod' '{{ .ProjectKebab }}/go.sum' snapshots/test.snapshot .github/workflows/*.yml
+          git commit -m "chore: update template dependencies"
+          git push --force-with-lease origin "$BRANCH_NAME"
+
+          if gh pr view "$BRANCH_NAME" --json number >/dev/null 2>&1; then
+            gh pr edit "$BRANCH_NAME" \
+              --title "chore: update template dependencies" \
+              --body "$(cat <<'EOF'
+          Automated update of template dependencies:
+          - Go module dependencies (`go mod tidy`)
+          - GitHub Action versions (major version bumps)
+          - Regenerated snapshot
+          EOF
+          )"
+          else
+            gh pr create \
+              --base main \
+              --head "$BRANCH_NAME" \
+              --title "chore: update template dependencies" \
+              --body "$(cat <<'EOF'
+          Automated update of template dependencies:
+          - Go module dependencies (`go mod tidy`)
+          - GitHub Action versions (major version bumps)
+          - Regenerated snapshot
+          EOF
+          )"
+          fi
