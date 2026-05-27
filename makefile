@@ -14,7 +14,7 @@ test/snapshot:
 
 .PHONY: test/snapshot/update
 test/snapshot/update:
-	scaffold new --output-dir=":memory:" --preset="test" --no-prompt --snapshot="stdout" ./ > snapshots/test.snapshot
+	scaffold new --output-dir=":memory:" --preset="test" --no-prompt --snapshot="stdout" ./ | sed 's/$(DATE_RE)/DATE/g' > snapshots/test.snapshot
 
 .PHONY: test/run
 test/run:
