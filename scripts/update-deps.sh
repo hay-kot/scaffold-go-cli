@@ -20,9 +20,10 @@ if [ ! -d "$PROJECT_DIR" ]; then
 	exit 1
 fi
 
-# Run go mod tidy in the rendered project
-echo "Running go mod tidy..."
+# Upgrade all dependencies to their latest minor/patch versions, then tidy
+echo "Running go get -u and go mod tidy..."
 cd "$PROJECT_DIR"
+go get -u ./...
 go mod tidy
 
 # Copy go.sum back directly (no template variables)
