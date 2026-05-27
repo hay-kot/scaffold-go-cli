@@ -49,7 +49,7 @@ run = [
 {{- if .Computed.feature_docker_integration }}
 
 [tasks.integration]
-description = "Run integration tests in Docker"
+description = "Run Docker-based integration tests against the built binary"
 depends = ["build"]
-run = "go test -tags integration -v -count=1 ./integration/..."
+run = "docker build -f Dockerfile.test -t {{ .Scaffold.gomod | pathBase }}-integration-test . && docker run --rm {{ .Scaffold.gomod | pathBase }}-integration-test"
 {{- end }}

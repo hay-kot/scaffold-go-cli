@@ -194,4 +194,5 @@ features:
       - "**/HOMEBREW_SETUP.md"
   - value: "{{ .Computed.feature_docker_integration }}"
     globs:
-      - "**/integration/**"
+      - "**/Dockerfile.test"
+      - "**/test/integration/**"
