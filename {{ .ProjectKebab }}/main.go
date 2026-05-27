@@ -7,6 +7,9 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"syscall"
+{{- if .Computed.feature_profiling }}
+	"time"
+{{- end }}
 {{- if .Computed.feature_file_logging }}
 	"io"
 	"path/filepath"
@@ -22,6 +25,9 @@ import (
 {{- end }}
 {{- if .Computed.feature_file_logging }}
 	"{{ .Scaffold.gomod }}/internal/paths"
+{{- end }}
+{{- if .Computed.feature_profiling }}
+	"{{ .Scaffold.gomod }}/internal/profiler"
 {{- end }}
 )
 
@@ -109,6 +115,9 @@ func run() int {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	flags := &commands.Flags{}
+{{- if .Computed.feature_profiling }}
+	prof := profiler.New(profiler.Options{})
+{{- end }}
 
 	app := &cli.Command{
 		Name:                  "{{ .Project }}",
@@ -143,6 +152,33 @@ func run() int {
 				Usage:       "path to config file",
 				Sources:     cli.EnvVars("CONFIG_FILE"),
 				Destination: &flags.ConfigFile,
+			},
+{{- end }}
+{{- if .Computed.feature_profiling }}
+			&cli.BoolFlag{
+				Name:        "pprof",
+				Usage:       "enable pprof HTTP endpoint",
+				Sources:     cli.EnvVars("PPROF"),
+				Destination: &flags.Pprof,
+			},
+			&cli.StringFlag{
+				Name:        "pprof-addr",
+				Usage:       "pprof HTTP endpoint address",
+				Sources:     cli.EnvVars("PPROF_ADDR"),
+				Value:       "127.0.0.1:{{ .Computed.pprof_port }}",
+				Destination: &flags.PprofAddr,
+			},
+			&cli.StringFlag{
+				Name:        "cpu-profile",
+				Usage:       "write CPU profile to file",
+				Sources:     cli.EnvVars("CPU_PROFILE"),
+				Destination: &flags.CPUProfile,
+			},
+			&cli.StringFlag{
+				Name:        "heap-profile",
+				Usage:       "write heap profile to file when the command exits",
+				Sources:     cli.EnvVars("HEAP_PROFILE"),
+				Destination: &flags.HeapProfile,
 			},
 {{- end }}
 {{- if .Computed.feature_json_output }}
@@ -188,9 +224,33 @@ func run() int {
 				return ctx, err
 			}
 {{- end }}
+{{- if .Computed.feature_profiling }}
+			pprofAddr := ""
+			if flags.Pprof || c.IsSet("pprof-addr") {
+				pprofAddr = flags.PprofAddr
+			}
+			prof = profiler.New(profiler.Options{
+				HTTPAddr:    pprofAddr,
+				CPUProfile:  flags.CPUProfile,
+				HeapProfile: flags.HeapProfile,
+			})
+			if err := prof.Start(ctx); err != nil {
+				return ctx, fmt.Errorf("start profiler: %w", err)
+			}
+{{- end }}
 
 			return ctx, nil
 		},
+{{- if .Computed.feature_profiling }}
+		After: func(ctx context.Context, c *cli.Command) error {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := prof.Stop(shutdownCtx); err != nil {
+				return fmt.Errorf("stop profiler: %w", err)
+			}
+			return nil
+		},
+{{- end }}
 	}
 
 {{- range .Scaffold.commands }}

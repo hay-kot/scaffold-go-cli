@@ -97,6 +97,15 @@ questions:
         - "File Logging"
         - "Config File"
         - "JSON Output"
+        - "Profiling"
+
+  - name: "pprof_port"
+    group: "cli"
+    when: '{{ has "Profiling" .features_cli }}'
+    prompt:
+      message: "Default pprof Port"
+      description: "Stable default pprof port for this CLI"
+      default: "{{ randInt 49152 65535 }}"
 
   - name: "docker_registry_url"
     group: "docker"
@@ -129,6 +138,8 @@ computed:
   feature_file_logging: '{{ has "File Logging" .Scaffold.features_cli }}'
   feature_config_file: '{{ has "Config File" .Scaffold.features_cli }}'
   feature_json_output: '{{ has "JSON Output" .Scaffold.features_cli }}'
+  feature_profiling: '{{ has "Profiling" .Scaffold.features_cli }}'
+  pprof_port: '{{ default (randInt 49152 65535) .Scaffold.pprof_port }}'
 
 delimiters:
   # since goreleaser uses go templates we can override the delimiters to make
@@ -153,7 +164,9 @@ presets:
     features_publishing:
       - "Docker"
       - "Homebrew Tap"
-    features_cli: []
+    features_cli:
+      - "Profiling"
+    pprof_port: "6060"
     docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
     homebrew_owner: "hay-kot"
     homebrew_name: "homebrew-scaffold-go-cli-tap"
@@ -171,6 +184,9 @@ features:
   - value: "{{ .Computed.feature_config_file }}"
     globs:
       - "**/config/*.go"
+  - value: "{{ .Computed.feature_profiling }}"
+    globs:
+      - "**/profiler/*.go"
   - value: "{{ .Computed.feature_homebrew_tap }}"
     globs:
       - "**/HOMEBREW_SETUP.md"

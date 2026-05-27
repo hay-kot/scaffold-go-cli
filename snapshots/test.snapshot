@@ -592,7 +592,7 @@ cli-test:  (type=dir)
 	LICENSE:  (type=file)
 		MIT License
 		
-		Copyright (c) 2026-02-16, John Doe
+		Copyright (c) 2026-05-27, John Doe
 		
 		Permission is hereby granted, free of charge, to any person obtaining a copy
 		of this software and associated documentation files (the "Software"), to deal
@@ -626,6 +626,36 @@ cli-test:  (type=dir)
 		## Usage
 		
 		TODO
+		
+		## Profiling
+		
+		This project can expose Go pprof endpoints or write profiles to disk when profiling is enabled.
+		
+		Expose the pprof HTTP endpoint:
+		
+		```bash
+		cli-test --pprof <command>
+		```
+		
+		By default, this listens on `127.0.0.1:6060`. Override it with `--pprof-addr` if needed:
+		
+		```bash
+		cli-test --pprof-addr 127.0.0.1:6060 <command>
+		```
+		
+		Then open <http://127.0.0.1:6060/debug/pprof/> or collect a CPU profile:
+		
+		```bash
+		go tool pprof http://127.0.0.1:6060/debug/pprof/profile?seconds=30
+		```
+		
+		Write profiles to disk for short-lived CLI commands:
+		
+		```bash
+		cli-test --cpu-profile cpu.pprof --heap-profile heap.pprof <command>
+		go tool pprof cpu.pprof
+		go tool pprof heap.pprof
+		```
 		
 	go.mod:  (type=file)
 		module github.com/username/project
@@ -682,6 +712,10 @@ cli-test:  (type=dir)
 				type Flags struct {
 					LogLevel string
 					NoColor  bool
+					Pprof       bool
+					PprofAddr   string
+					CPUProfile  string
+					HeapProfile string
 				}
 				
 			goodbye.go:  (type=file)
@@ -814,6 +848,250 @@ cli-test:  (type=dir)
 					return filepath.Join(home, ".cache", appName)
 				}
 				
+		profiler:  (type=dir)
+			profiler.go:  (type=file)
+				
+				package profiler
+				
+				import (
+					"context"
+					"fmt"
+					"net"
+					"net/http"
+					"net/http/pprof"
+					"os"
+					"runtime"
+					runtimepprof "runtime/pprof"
+				
+					"github.com/rs/zerolog/log"
+				)
+				
+				// Options configures runtime profiling.
+				type Options struct {
+					HTTPAddr    string
+					CPUProfile  string
+					HeapProfile string
+				}
+				
+				// Profiler manages optional pprof endpoints and profile dumps.
+				type Profiler struct {
+					options    Options
+					server     *http.Server
+					listener   net.Listener
+					cpuProfile *os.File
+				}
+				
+				// New creates a Profiler from options.
+				func New(options Options) *Profiler {
+					return &Profiler{options: options}
+				}
+				
+				// Start enables configured profilers.
+				func (p *Profiler) Start(ctx context.Context) error {
+					if p.options.CPUProfile != "" {
+						if err := p.startCPUProfile(); err != nil {
+							return err
+						}
+					}
+				
+					if p.options.HTTPAddr != "" {
+						if err := p.startHTTPServer(); err != nil {
+							_ = p.Stop(ctx)
+							return err
+						}
+					}
+				
+					return nil
+				}
+				
+				// Stop shuts down configured profilers and writes final profile dumps.
+				func (p *Profiler) Stop(ctx context.Context) error {
+					var stopErr error
+				
+					if p.cpuProfile != nil {
+						runtimepprof.StopCPUProfile()
+						if err := p.cpuProfile.Close(); err != nil {
+							stopErr = fmt.Errorf("close CPU profile: %w", err)
+						}
+						p.cpuProfile = nil
+						log.Info().Str("path", p.options.CPUProfile).Msg("wrote CPU profile")
+					}
+				
+					if p.options.HeapProfile != "" {
+						if err := writeHeapProfile(p.options.HeapProfile); err != nil {
+							if stopErr != nil {
+								stopErr = fmt.Errorf("%v; write heap profile: %w", stopErr, err)
+							} else {
+								stopErr = fmt.Errorf("write heap profile: %w", err)
+							}
+						} else {
+							log.Info().Str("path", p.options.HeapProfile).Msg("wrote heap profile")
+						}
+					}
+				
+					if p.server != nil {
+						log.Info().Str("addr", p.Addr()).Msg("shutting down pprof server")
+						if err := p.server.Shutdown(ctx); err != nil {
+							if stopErr != nil {
+								stopErr = fmt.Errorf("%v; shutdown pprof server: %w", stopErr, err)
+							} else {
+								stopErr = fmt.Errorf("shutdown pprof server: %w", err)
+							}
+						}
+						p.server = nil
+					}
+				
+					return stopErr
+				}
+				
+				// Addr returns the bound HTTP pprof address.
+				func (p *Profiler) Addr() string {
+					if p.listener == nil {
+						return ""
+					}
+					return p.listener.Addr().String()
+				}
+				
+				func (p *Profiler) startCPUProfile() error {
+					file, err := os.Create(p.options.CPUProfile)
+					if err != nil {
+						return fmt.Errorf("create CPU profile: %w", err)
+					}
+				
+					if err := runtimepprof.StartCPUProfile(file); err != nil {
+						_ = file.Close()
+						return fmt.Errorf("start CPU profile: %w", err)
+					}
+				
+					p.cpuProfile = file
+					log.Info().Str("path", p.options.CPUProfile).Msg("started CPU profiling")
+					return nil
+				}
+				
+				func (p *Profiler) startHTTPServer() error {
+					listener, err := net.Listen("tcp", p.options.HTTPAddr)
+					if err != nil {
+						return fmt.Errorf("listen for pprof server: %w", err)
+					}
+				
+					mux := http.NewServeMux()
+					mux.HandleFunc("/debug/pprof/", pprof.Index)
+					mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+					mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+					mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+					mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+				
+					p.listener = listener
+					p.server = &http.Server{Handler: mux}
+				
+					go func() {
+						if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {
+							log.Error().Err(err).Msg("pprof server failed")
+						}
+					}()
+				
+					log.Info().Str("url", fmt.Sprintf("http://%s/debug/pprof/", p.Addr())).Msg("pprof endpoint available")
+					return nil
+				}
+				
+				func writeHeapProfile(path string) error {
+					file, err := os.Create(path)
+					if err != nil {
+						return fmt.Errorf("create heap profile: %w", err)
+					}
+					runtime.GC()
+					if err := runtimepprof.WriteHeapProfile(file); err != nil {
+						_ = file.Close()
+						return fmt.Errorf("write heap profile: %w", err)
+					}
+					if err := file.Close(); err != nil {
+						return fmt.Errorf("close heap profile: %w", err)
+					}
+				
+					return nil
+				}
+				
+			profiler_test.go:  (type=file)
+				
+				package profiler
+				
+				import (
+					"context"
+					"net/http"
+					"os"
+					"path/filepath"
+					"testing"
+					"time"
+				)
+				
+				func TestProfilerHTTPServer(t *testing.T) {
+					profiler := New(Options{HTTPAddr: "127.0.0.1:0"})
+				
+					if err := profiler.Start(context.Background()); err != nil {
+						t.Fatalf("Start() error = %v", err)
+					}
+				
+					shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer cancel()
+					defer func() {
+						if err := profiler.Stop(shutdownCtx); err != nil {
+							t.Fatalf("Stop() error = %v", err)
+						}
+					}()
+				
+					resp, err := http.Get("http://" + profiler.Addr() + "/debug/pprof/")
+					if err != nil {
+						t.Fatalf("GET pprof index error = %v", err)
+					}
+					defer func() {
+						if err := resp.Body.Close(); err != nil {
+							t.Fatalf("close response body: %v", err)
+						}
+					}()
+				
+					if resp.StatusCode != http.StatusOK {
+						t.Fatalf("GET pprof index status = %d, want %d", resp.StatusCode, http.StatusOK)
+					}
+				}
+				
+				func TestProfilerWritesProfiles(t *testing.T) {
+					tmpDir := t.TempDir()
+					cpuProfile := filepath.Join(tmpDir, "cpu.pprof")
+					heapProfile := filepath.Join(tmpDir, "heap.pprof")
+				
+					profiler := New(Options{
+						CPUProfile:  cpuProfile,
+						HeapProfile: heapProfile,
+					})
+				
+					if err := profiler.Start(context.Background()); err != nil {
+						t.Fatalf("Start() error = %v", err)
+					}
+				
+					for i := 0; i < 100000; i++ {
+						_ = i * i
+					}
+				
+					if err := profiler.Stop(context.Background()); err != nil {
+						t.Fatalf("Stop() error = %v", err)
+					}
+				
+					assertNonEmptyFile(t, cpuProfile)
+					assertNonEmptyFile(t, heapProfile)
+				}
+				
+				func assertNonEmptyFile(t *testing.T, path string) {
+					t.Helper()
+				
+					info, err := os.Stat(path)
+					if err != nil {
+						t.Fatalf("stat %s: %v", path, err)
+					}
+					if info.Size() == 0 {
+						t.Fatalf("%s is empty", path)
+					}
+				}
+				
 	main.go:  (type=file)
 		package main
 		
@@ -824,12 +1102,14 @@ cli-test:  (type=dir)
 			"os/signal"
 			"runtime/debug"
 			"syscall"
+			"time"
 		
 			"github.com/rs/zerolog"
 			"github.com/rs/zerolog/log"
 			"github.com/urfave/cli/v3"
 		
 			"github.com/username/project/internal/commands"
+			"github.com/username/project/internal/profiler"
 		)
 		
 		var (
@@ -880,6 +1160,7 @@ cli-test:  (type=dir)
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		
 			flags := &commands.Flags{}
+			prof := profiler.New(profiler.Options{})
 		
 			app := &cli.Command{
 				Name:                  "cli-test",
@@ -900,13 +1181,58 @@ cli-test:  (type=dir)
 						Sources:     cli.EnvVars("NO_COLOR"),
 						Destination: &flags.NoColor,
 					},
+					&cli.BoolFlag{
+						Name:        "pprof",
+						Usage:       "enable pprof HTTP endpoint",
+						Sources:     cli.EnvVars("PPROF"),
+						Destination: &flags.Pprof,
+					},
+					&cli.StringFlag{
+						Name:        "pprof-addr",
+						Usage:       "pprof HTTP endpoint address",
+						Sources:     cli.EnvVars("PPROF_ADDR"),
+						Value:       "127.0.0.1:6060",
+						Destination: &flags.PprofAddr,
+					},
+					&cli.StringFlag{
+						Name:        "cpu-profile",
+						Usage:       "write CPU profile to file",
+						Sources:     cli.EnvVars("CPU_PROFILE"),
+						Destination: &flags.CPUProfile,
+					},
+					&cli.StringFlag{
+						Name:        "heap-profile",
+						Usage:       "write heap profile to file when the command exits",
+						Sources:     cli.EnvVars("HEAP_PROFILE"),
+						Destination: &flags.HeapProfile,
+					},
 				},
 				Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
 					if err := setupLogger(flags.LogLevel, flags.NoColor); err != nil {
 						return ctx, err
 					}
+					pprofAddr := ""
+					if flags.Pprof || c.IsSet("pprof-addr") {
+						pprofAddr = flags.PprofAddr
+					}
+					prof = profiler.New(profiler.Options{
+						HTTPAddr:    pprofAddr,
+						CPUProfile:  flags.CPUProfile,
+						HeapProfile: flags.HeapProfile,
+					})
+					if err := prof.Start(ctx); err != nil {
+						return ctx, fmt.Errorf("start profiler: %w", err)
+					}
 		
 					return ctx, nil
+				},
+				After: func(ctx context.Context, c *cli.Command) error {
+					shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer cancel()
+					if err := prof.Stop(shutdownCtx); err != nil {
+						return fmt.Errorf("stop profiler: %w", err)
+					}
+					return nil
 				},
 			}
 			app = commands.NewHelloCmd(flags).Register(app)
