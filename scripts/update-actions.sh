@@ -10,30 +10,40 @@ if ! command -v gh &>/dev/null; then
 	exit 1
 fi
 
-# Extract unique action references (org/repo@vN) from all workflow files
+# Extract unique action references (org/repo@vN) from all workflow files.
+# Key is "repo@vN" so the same action at different versions are each checked.
 declare -A actions
 while IFS= read -r line; do
 	# Match "uses: org/repo@vN" patterns, skip local references (./)
 	if [[ "$line" =~ uses:\ +([a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)@v([0-9]+) ]]; then
 		repo="${BASH_REMATCH[1]}"
 		current="v${BASH_REMATCH[2]}"
-		actions["$repo"]="$current"
+		actions["$repo@$current"]="$current"
 	fi
 done < <(cat "$WORKFLOWS_DIR"/*.yml)
 
-echo "Checking ${#actions[@]} actions for updates..."
+echo "Checking ${#actions[@]} action reference(s) for updates..."
 echo ""
 
+# Cache latest versions to avoid redundant API calls
+declare -A latest_cache
+
 updated=0
-for repo in "${!actions[@]}"; do
-	current="${actions[$repo]}"
+for key in "${!actions[@]}"; do
+	repo="${key%@*}"
+	current="${actions[$key]}"
 
-	# Get the latest release tag from GitHub
-	latest_tag=$(gh api "repos/$repo/releases/latest" --jq '.tag_name' 2>/dev/null || echo "")
+	# Get the latest release tag from GitHub (cached per repo)
+	if [[ -v latest_cache["$repo"] ]]; then
+		latest_tag="${latest_cache[$repo]}"
+	else
+		latest_tag=$(gh api "repos/$repo/releases/latest" --jq '.tag_name' 2>/dev/null || echo "")
 
-	if [ -z "$latest_tag" ]; then
-		# Some actions don't use releases, try tags instead
-		latest_tag=$(gh api "repos/$repo/tags?per_page=1" --jq '.[0].name' 2>/dev/null || echo "")
+		if [ -z "$latest_tag" ]; then
+			# Some actions don't use releases, try tags instead
+			latest_tag=$(gh api "repos/$repo/tags?per_page=1" --jq '.[0].name' 2>/dev/null || echo "")
+		fi
+		latest_cache["$repo"]="$latest_tag"
 	fi
 
 	if [ -z "$latest_tag" ]; then
