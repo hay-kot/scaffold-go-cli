@@ -70,66 +70,25 @@ homebrew_casks:
     homepage: "https://[[ .Scaffold.gomod ]]"
     dependencies:
       - formula: go
-        type: optional
       - formula: git
 [[ end ]]
 
 [[ if .Computed.feature_docker ]]
-dockers:
-  - use: buildx
-    goos: linux
-    goarch: arm
-    goarm: 7
-    image_templates:
-      - "[[ .Scaffold.docker_registry_url ]]:v{{ .Version }}-armv7"
-      - "[[ .Scaffold.docker_registry_url ]]:latest-armv7"
-    build_flag_templates:
-      - "--platform=linux/arm/v7"
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version=v{{.Version}}"
-
-  - use: buildx
-    goos: linux
-    goarch: arm64
-    image_templates:
-      - "[[ .Scaffold.docker_registry_url ]]:v{{ .Version }}-arm64"
-      - "[[ .Scaffold.docker_registry_url ]]:latest-arm64"
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version=v{{.Version}}"
-
-  - use: buildx
-    goos: linux
-    goarch: amd64
-    image_templates:
-      - "[[ .Scaffold.docker_registry_url ]]:v{{ .Version }}-amd64"
-      - "[[ .Scaffold.docker_registry_url ]]:latest-amd64"
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version=v{{.Version}}"
-
-docker_manifests:
-  - name_template: "[[ .Scaffold.docker_registry_url ]]:v{{ .Version }}"
-    image_templates:
-      - "[[ .Scaffold.docker_registry_url ]]:v{{ .Version }}-amd64"
-      - "[[ .Scaffold.docker_registry_url ]]:v{{ .Version }}-arm64"
-      - "[[ .Scaffold.docker_registry_url ]]:v{{ .Version }}-armv7"
-  - name_template: "[[ .Scaffold.docker_registry_url ]]:latest"
-    image_templates:
-      - "[[ .Scaffold.docker_registry_url ]]:latest-amd64"
-      - "[[ .Scaffold.docker_registry_url ]]:latest-arm64"
-      - "[[ .Scaffold.docker_registry_url ]]:latest-armv7"
+dockers_v2:
+  - images:
+      - "[[ .Scaffold.docker_registry_url ]]"
+    tags:
+      - "v{{ .Version }}"
+      - "latest"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+      - linux/arm/v7
+    annotations:
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.title": "{{ .ProjectName }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "v{{ .Version }}"
 [[ end ]]
 
 #

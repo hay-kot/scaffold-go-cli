@@ -127,6 +127,9 @@ cli-test:  (type=dir)
 				      - name: Test
 				        run: go test ./... -race
 				
+				      - name: Integration Tests
+				        run: mise run integration
+				
 			pr.yml:  (type=file)
 				name: pr
 				
@@ -397,66 +400,25 @@ cli-test:  (type=dir)
 		    homepage: "https://github.com/username/project"
 		    dependencies:
 		      - formula: go
-		        type: optional
 		      - formula: git
 		
 		
 		
-		dockers:
-		  - use: buildx
-		    goos: linux
-		    goarch: arm
-		    goarm: 7
-		    image_templates:
-		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-armv7"
-		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-armv7"
-		    build_flag_templates:
-		      - "--platform=linux/arm/v7"
-		      - "--pull"
-		      - "--label=org.opencontainers.image.created={{.Date}}"
-		      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-		      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-		      - "--label=org.opencontainers.image.version=v{{.Version}}"
-		
-		  - use: buildx
-		    goos: linux
-		    goarch: arm64
-		    image_templates:
-		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-arm64"
-		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-arm64"
-		    build_flag_templates:
-		      - "--platform=linux/arm64"
-		      - "--pull"
-		      - "--label=org.opencontainers.image.created={{.Date}}"
-		      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-		      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-		      - "--label=org.opencontainers.image.version=v{{.Version}}"
-		
-		  - use: buildx
-		    goos: linux
-		    goarch: amd64
-		    image_templates:
-		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-amd64"
-		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-amd64"
-		    build_flag_templates:
-		      - "--platform=linux/amd64"
-		      - "--pull"
-		      - "--label=org.opencontainers.image.created={{.Date}}"
-		      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-		      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-		      - "--label=org.opencontainers.image.version=v{{.Version}}"
-		
-		docker_manifests:
-		  - name_template: "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}"
-		    image_templates:
-		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-amd64"
-		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-arm64"
-		      - "ghcr.io/hay-kot/scaffold-go-cli:v{{ .Version }}-armv7"
-		  - name_template: "ghcr.io/hay-kot/scaffold-go-cli:latest"
-		    image_templates:
-		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-amd64"
-		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-arm64"
-		      - "ghcr.io/hay-kot/scaffold-go-cli:latest-armv7"
+		dockers_v2:
+		  - images:
+		      - "ghcr.io/hay-kot/scaffold-go-cli"
+		    tags:
+		      - "v{{ .Version }}"
+		      - "latest"
+		    platforms:
+		      - linux/amd64
+		      - linux/arm64
+		      - linux/arm/v7
+		    annotations:
+		      "org.opencontainers.image.created": "{{ .Date }}"
+		      "org.opencontainers.image.title": "{{ .ProjectName }}"
+		      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+		      "org.opencontainers.image.version": "v{{ .Version }}"
 		
 		
 		#
@@ -547,8 +509,39 @@ cli-test:  (type=dir)
 							
 	Dockerfile:  (type=file)
 		FROM gcr.io/distroless/static
+		ARG TARGETPLATFORM
 		ENTRYPOINT ["/project"]
-		COPY project /
+		COPY ${TARGETPLATFORM}/project /
+		
+	Dockerfile.test:  (type=file)
+		FROM golang:1.26-bookworm AS gobase
+		
+		FROM debian:bookworm-slim
+		
+		RUN apt-get update && apt-get install -y --no-install-recommends \
+		    ca-certificates \
+		    git \
+		    && rm -rf /var/lib/apt/lists/*
+		
+		COPY --from=gobase /usr/local/go /usr/local/go
+		ENV PATH="/usr/local/go/bin:${PATH}"
+		ENV GOPATH="/go"
+		ENV PATH="${GOPATH}/bin:${PATH}"
+		
+		ARG TARGETARCH=amd64
+		COPY dist/project_linux_${TARGETARCH}_*/project /usr/local/bin/project
+		RUN chmod +x /usr/local/bin/project
+		
+		ENV CLI_INTEGRATION=1
+		
+		WORKDIR /app
+		
+		COPY go.mod go.sum ./
+		RUN go mod download
+		
+		COPY test/integration/ ./test/integration/
+		
+		CMD ["go", "test", "-v", "-tags", "integration", "-count=1", "./test/integration/..."]
 		
 	HOMEBREW_SETUP.md:  (type=file)
 		# Homebrew Tap Setup
@@ -1312,6 +1305,11 @@ cli-test:  (type=dir)
 		    { task = "test" },
 		]
 		
+		[tasks.integration]
+		description = "Run Docker-based integration tests against the built binary"
+		depends = ["build"]
+		run = "docker build -f Dockerfile.test -t project-integration-test . && docker run --rm project-integration-test"
+		
 	renovate.json:  (type=file)
 		{
 		    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
@@ -1322,4 +1320,186 @@ cli-test:  (type=dir)
 		        "gomodTidy"
 		    ]
 		}
+	test:  (type=dir)
+		integration:  (type=dir)
+			harness_test.go:  (type=file)
+				//go:build integration
+				
+				package integration
+				
+				import (
+					"context"
+					"errors"
+					"os"
+					"os/exec"
+					"path/filepath"
+					"strings"
+					"testing"
+					"time"
+				)
+				
+				const commandTimeout = 30 * time.Second
+				
+				// Harness runs the built CLI binary with isolated per-test state.
+				type Harness struct {
+					t        *testing.T
+					homeDir  string
+					dataDir  string
+					cacheDir string
+					configDir string
+				}
+				
+				// NewHarness creates an integration test harness with isolated XDG directories.
+				func NewHarness(t *testing.T) *Harness {
+					t.Helper()
+				
+					return &Harness{
+						t:         t,
+						homeDir:   t.TempDir(),
+						dataDir:   t.TempDir(),
+						cacheDir:  t.TempDir(),
+						configDir: t.TempDir(),
+					}
+				}
+				
+				// Run executes the CLI and returns combined stdout/stderr output.
+				func (h *Harness) Run(args ...string) (string, error) {
+					h.t.Helper()
+					cmd := h.command(args...)
+					out, err := cmd.CombinedOutput()
+					return string(out), err
+				}
+				
+				// RunInDir executes the CLI from dir and returns combined stdout/stderr output.
+				func (h *Harness) RunInDir(dir string, args ...string) (string, error) {
+					h.t.Helper()
+					cmd := h.command(args...)
+					cmd.Dir = dir
+					out, err := cmd.CombinedOutput()
+					return string(out), err
+				}
+				
+				// RunStdout executes the CLI and returns stdout only.
+				func (h *Harness) RunStdout(args ...string) (string, error) {
+					h.t.Helper()
+					cmd := h.command(args...)
+					out, err := cmd.Output()
+					if err != nil {
+						var exitErr *exec.ExitError
+						if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+							h.t.Logf("stderr from project %v: %s", args, exitErr.Stderr)
+						}
+					}
+					return string(out), err
+				}
+				
+				// RunWithStdin executes the CLI with stdin and returns stdout only.
+				func (h *Harness) RunWithStdin(input string, args ...string) (string, error) {
+					h.t.Helper()
+					cmd := h.command(args...)
+					cmd.Stdin = strings.NewReader(input)
+					out, err := cmd.Output()
+					if err != nil {
+						var exitErr *exec.ExitError
+						if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+							h.t.Logf("stderr from project %v: %s", args, exitErr.Stderr)
+						}
+					}
+					return string(out), err
+				}
+				
+				func (h *Harness) command(args ...string) *exec.Cmd {
+					h.t.Helper()
+				
+					ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
+					h.t.Cleanup(cancel)
+				
+					cmd := exec.CommandContext(ctx, cliBin, args...)
+					cmd.Env = []string{
+						"PATH=" + os.Getenv("PATH"),
+						"TMPDIR=" + os.Getenv("TMPDIR"),
+						"TERM=" + os.Getenv("TERM"),
+						"HOME=" + h.homeDir,
+						"XDG_DATA_HOME=" + h.dataDir,
+						"XDG_CACHE_HOME=" + h.cacheDir,
+						"XDG_CONFIG_HOME=" + h.configDir,
+						"LOG_LEVEL=debug",
+						"LOG_FILE=" + filepath.Join(h.dataDir, "project.log"),
+						"NO_COLOR=1",
+					}
+					return cmd
+				}
+				
+			main_test.go:  (type=file)
+				//go:build integration
+				
+				package integration
+				
+				import (
+					"fmt"
+					"os"
+					"os/exec"
+					"testing"
+				)
+				
+				var cliBin string
+				
+				func TestMain(m *testing.M) {
+					if os.Getenv("CLI_INTEGRATION") != "1" {
+						fmt.Fprintln(os.Stderr, "skipping integration tests: CLI_INTEGRATION=1 not set (run via mise run integration)")
+						os.Exit(0)
+					}
+				
+					path, err := exec.LookPath("project")
+					if err != nil {
+						panic("project binary not found in PATH; build it first")
+					}
+					cliBin = path
+				
+					os.Exit(m.Run())
+				}
+				
+			smoke_test.go:  (type=file)
+				//go:build integration
+				
+				package integration
+				
+				import (
+					"strings"
+					"testing"
+				)
+				
+				func TestSmokeHelp(t *testing.T) {
+					h := NewHarness(t)
+					out, err := h.Run("help")
+					if err != nil {
+						t.Fatalf("help command failed: %v\noutput: %s", err, out)
+					}
+					if !strings.Contains(out, "cli-test") {
+						t.Fatalf("expected help output to mention cli-test, got:\n%s", out)
+					}
+				}
+				
+				func TestSmokeVersion(t *testing.T) {
+					h := NewHarness(t)
+					out, err := h.Run("--version")
+					if err != nil {
+						t.Fatalf("version command failed: %v\noutput: %s", err, out)
+					}
+					if strings.TrimSpace(out) == "" {
+						t.Fatal("expected version output, got empty string")
+					}
+				}
+				
+				func TestSmokeCommand(t *testing.T) {
+					h := NewHarness(t)
+					out, err := h.Run("hello")
+					if err != nil {
+						t.Fatalf("command failed: %v\noutput: %s", err, out)
+					}
+					if !strings.Contains(out, "Hello World!") {
+						t.Fatalf("expected command output to contain Hello World!, got:\n%s", out)
+					}
+				}
+				
 

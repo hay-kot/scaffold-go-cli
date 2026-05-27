@@ -1,0 +1,30 @@
+{{- if .Computed.feature_docker_integration -}}
+FROM golang:1.26-bookworm AS gobase
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=gobase /usr/local/go /usr/local/go
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GOPATH="/go"
+ENV PATH="${GOPATH}/bin:${PATH}"
+
+ARG TARGETARCH=amd64
+COPY dist/{{ .Scaffold.gomod | pathBase }}_linux_${TARGETARCH}_*/{{ .Scaffold.gomod | pathBase }} /usr/local/bin/{{ .Scaffold.gomod | pathBase }}
+RUN chmod +x /usr/local/bin/{{ .Scaffold.gomod | pathBase }}
+
+ENV CLI_INTEGRATION=1
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY test/integration/ ./test/integration/
+
+CMD ["go", "test", "-v", "-tags", "integration", "-count=1", "./test/integration/..."]
+{{- end }}

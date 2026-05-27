@@ -46,3 +46,10 @@ run = [
     { task = "lint" },
     { task = "test" },
 ]
+{{- if .Computed.feature_docker_integration }}
+
+[tasks.integration]
+description = "Run Docker-based integration tests against the built binary"
+depends = ["build"]
+run = "docker build -f Dockerfile.test -t {{ .Scaffold.gomod | pathBase }}-integration-test . && docker run --rm {{ .Scaffold.gomod | pathBase }}-integration-test"
+{{- end }}

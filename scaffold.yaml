@@ -15,7 +15,6 @@ messages:
     mise run run -- hello
     ```
 skip:
-  - "*mise.toml"
   - "**/.scaffold/**/*.go"
 
 each:
@@ -98,6 +97,7 @@ questions:
         - "Config File"
         - "JSON Output"
         - "Profiling"
+        - "Docker Integration Tests"
 
   - name: "pprof_port"
     group: "cli"
@@ -139,6 +139,7 @@ computed:
   feature_config_file: '{{ has "Config File" .Scaffold.features_cli }}'
   feature_json_output: '{{ has "JSON Output" .Scaffold.features_cli }}'
   feature_profiling: '{{ has "Profiling" .Scaffold.features_cli }}'
+  feature_docker_integration: '{{ has "Docker Integration Tests" .Scaffold.features_cli }}'
   pprof_port: '{{ default (randInt 49152 65535) .Scaffold.pprof_port }}'
 
 delimiters:
@@ -166,6 +167,7 @@ presets:
       - "Homebrew Tap"
     features_cli:
       - "Profiling"
+      - "Docker Integration Tests"
     pprof_port: "6060"
     docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
     homebrew_owner: "hay-kot"
@@ -190,3 +192,7 @@ features:
   - value: "{{ .Computed.feature_homebrew_tap }}"
     globs:
       - "**/HOMEBREW_SETUP.md"
+  - value: "{{ .Computed.feature_docker_integration }}"
+    globs:
+      - "**/Dockerfile.test"
+      - "**/test/integration/**"
