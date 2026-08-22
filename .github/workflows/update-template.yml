@@ -52,7 +52,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git checkout -B "$BRANCH_NAME"
-          git add '{{ .ProjectKebab }}/go.mod' '{{ .ProjectKebab }}/go.sum' snapshots/test.snapshot .github/workflows/*.yml
+          git add -A
           git commit -m "chore: update template dependencies"
           git push --force origin "$BRANCH_NAME"
 
