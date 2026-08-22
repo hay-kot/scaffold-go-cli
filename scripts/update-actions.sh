@@ -3,7 +3,16 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-WORKFLOWS_DIR="$REPO_ROOT/{{ .ProjectKebab }}/.github/workflows"
+
+# Both the template's workflows and this repo's own CI need bumping; the
+# scheduled updater commits changes from either.
+WORKFLOW_FILES=()
+while IFS= read -r -d '' file; do
+	WORKFLOW_FILES+=("$file")
+done < <(find \
+	"$REPO_ROOT/{{ .ProjectKebab }}/.github/workflows" \
+	"$REPO_ROOT/.github/workflows" \
+	-name '*.yml' -print0)
 
 if ! command -v gh &>/dev/null; then
 	echo "error: gh CLI is required"
@@ -15,12 +24,12 @@ fi
 declare -A actions
 while IFS= read -r line; do
 	# Match "uses: org/repo@vN" patterns, skip local references (./)
-	if [[ "$line" =~ uses:\ +([a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)@v([0-9]+) ]]; then
+	if [[ "$line" =~ uses:\ +([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)@v([0-9]+) ]]; then
 		repo="${BASH_REMATCH[1]}"
 		current="v${BASH_REMATCH[2]}"
 		actions["$repo@$current"]="$current"
 	fi
-done < <(cat "$WORKFLOWS_DIR"/*.yml)
+done < <(cat "${WORKFLOW_FILES[@]}")
 
 echo "Checking ${#actions[@]} action reference(s) for updates..."
 echo ""
@@ -65,7 +74,7 @@ for key in "${!actions[@]}"; do
 		echo "  UPDATE $repo@$current -> $latest (latest: $latest_tag)"
 
 		# Replace all occurrences across workflow files
-		for file in "$WORKFLOWS_DIR"/*.yml; do
+		for file in "${WORKFLOW_FILES[@]}"; do
 			if [[ "$OSTYPE" == "darwin"* ]]; then
 				sed -i '' "s|$repo@$current|$repo@$latest|g" "$file"
 			else
