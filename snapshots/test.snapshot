@@ -658,6 +658,7 @@ cli-test:  (type=dir)
 		require (
 			github.com/rs/zerolog v1.35.1
 			github.com/urfave/cli/v3 v3.11.0
+			gopkg.in/yaml.v3 v3.0.1
 		)
 		
 		require (
@@ -683,6 +684,8 @@ cli-test:  (type=dir)
 		github.com/urfave/cli/v3 v3.11.0/go.mod h1:ysVLtOEmg2tOy6PknnYVhDoouyC/6N42TMeoMzskhso=
 		golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
 		golang.org/x/sys v0.47.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
+		gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
+		gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 		gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 		gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 		
@@ -699,6 +702,9 @@ cli-test:  (type=dir)
 					PprofAddr   string
 					CPUProfile  string
 					HeapProfile string
+					LogFile  string
+					ConfigFile string
+					JSON bool
 				}
 				
 			goodbye.go:  (type=file)
@@ -706,7 +712,9 @@ cli-test:  (type=dir)
 				
 				import (
 					"context"
+					"encoding/json"
 					"fmt"
+					"os"
 				
 					"github.com/rs/zerolog/log"
 					"github.com/urfave/cli/v3"
@@ -738,6 +746,11 @@ cli-test:  (type=dir)
 				
 				func (cmd *GoodbyeCmd) run(ctx context.Context, c *cli.Command) error {
 					log.Info().Msg("running goodbye command")
+					if cmd.flags.JSON {
+						return json.NewEncoder(os.Stdout).Encode(map[string]string{
+							"message": "Hello World!",
+						})
+					}
 				
 					fmt.Println("Hello World!")
 				
@@ -749,7 +762,9 @@ cli-test:  (type=dir)
 				
 				import (
 					"context"
+					"encoding/json"
 					"fmt"
+					"os"
 				
 					"github.com/rs/zerolog/log"
 					"github.com/urfave/cli/v3"
@@ -781,10 +796,69 @@ cli-test:  (type=dir)
 				
 				func (cmd *HelloCmd) run(ctx context.Context, c *cli.Command) error {
 					log.Info().Msg("running hello command")
+					if cmd.flags.JSON {
+						return json.NewEncoder(os.Stdout).Encode(map[string]string{
+							"message": "Hello World!",
+						})
+					}
 				
 					fmt.Println("Hello World!")
 				
 					return nil
+				}
+				
+		config:  (type=dir)
+			config.go:  (type=file)
+				package config
+				
+				import (
+					"fmt"
+					"os"
+					"path/filepath"
+				
+					"gopkg.in/yaml.v3"
+				
+					"github.com/username/project/internal/paths"
+				)
+				
+				// Config holds the application configuration loaded from a YAML file.
+				type Config struct {
+					LogLevel string `yaml:"log_level"`
+					LogFile  string `yaml:"log_file"`
+				}
+				
+				// Default returns a Config with default values.
+				func Default() Config {
+					return Config{
+						LogLevel: "info",
+					}
+				}
+				
+				// Read loads config from the default XDG config path.
+				// Returns default config if the file does not exist.
+				func Read() (Config, error) {
+					return ReadFrom(filepath.Join(paths.ConfigDir(), "config.yaml"))
+				}
+				
+				// ReadFrom loads config from the given file path.
+				// Returns default config if the file does not exist.
+				func ReadFrom(path string) (Config, error) {
+					cfg := Default()
+				
+					data, err := os.ReadFile(path)
+					if err != nil {
+						if os.IsNotExist(err) {
+							return cfg, nil
+						}
+				
+						return cfg, fmt.Errorf("reading config: %w", err)
+					}
+				
+					if err := yaml.Unmarshal(data, &cfg); err != nil {
+						return cfg, fmt.Errorf("parsing config: %w", err)
+					}
+				
+					return cfg, nil
 				}
 				
 		paths:  (type=dir)
@@ -1086,12 +1160,16 @@ cli-test:  (type=dir)
 			"runtime/debug"
 			"syscall"
 			"time"
+			"io"
+			"path/filepath"
 		
 			"github.com/rs/zerolog"
 			"github.com/rs/zerolog/log"
 			"github.com/urfave/cli/v3"
 		
 			"github.com/username/project/internal/commands"
+			"github.com/username/project/internal/config"
+			"github.com/username/project/internal/paths"
 			"github.com/username/project/internal/profiler"
 		)
 		
@@ -1124,13 +1202,35 @@ cli-test:  (type=dir)
 		
 			return fmt.Sprintf("%s (%s) %s", version, short, date)
 		}
-		func setupLogger(level string, noColor bool) error {
+		func setupLogger(level string, logFile string, noColor bool) error {
 			parsedLevel, err := zerolog.ParseLevel(level)
 			if err != nil {
 				return fmt.Errorf("failed to parse log level: %w", err)
 			}
 		
-			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor}).Level(parsedLevel)
+			var output io.Writer = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor}
+		
+			if logFile != "" {
+				// Create log directory if it doesn't exist
+				logDir := filepath.Dir(logFile)
+				if err := os.MkdirAll(logDir, 0755); err != nil {
+					return fmt.Errorf("failed to create log directory: %w", err)
+				}
+		
+				// Open log file
+				file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+				if err != nil {
+					return fmt.Errorf("failed to open log file: %w", err)
+				}
+		
+				// Write to both console and file
+				output = io.MultiWriter(
+					zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor},
+					file,
+				)
+			}
+		
+			log.Logger = log.Output(output).Level(parsedLevel)
 		
 			return nil
 		}
@@ -1164,6 +1264,18 @@ cli-test:  (type=dir)
 						Sources:     cli.EnvVars("NO_COLOR"),
 						Destination: &flags.NoColor,
 					},
+					&cli.StringFlag{
+						Name:        "log-file",
+						Usage:       "path to log file (optional)",
+						Sources:     cli.EnvVars("LOG_FILE"),
+						Destination: &flags.LogFile,
+					},
+					&cli.StringFlag{
+						Name:        "config",
+						Usage:       "path to config file",
+						Sources:     cli.EnvVars("CONFIG_FILE"),
+						Destination: &flags.ConfigFile,
+					},
 					&cli.BoolFlag{
 						Name:        "pprof",
 						Usage:       "enable pprof HTTP endpoint",
@@ -1189,9 +1301,35 @@ cli-test:  (type=dir)
 						Sources:     cli.EnvVars("HEAP_PROFILE"),
 						Destination: &flags.HeapProfile,
 					},
+					&cli.BoolFlag{
+						Name:        "json",
+						Usage:       "output in JSON format",
+						Destination: &flags.JSON,
+					},
 				},
 				Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
-					if err := setupLogger(flags.LogLevel, flags.NoColor); err != nil {
+					cfg, err := func() (config.Config, error) {
+						if flags.ConfigFile != "" {
+							return config.ReadFrom(flags.ConfigFile)
+						}
+						return config.Read()
+					}()
+					if err != nil {
+						return ctx, fmt.Errorf("loading config: %w", err)
+					}
+		
+					if flags.LogLevel == "info" && cfg.LogLevel != "" {
+						flags.LogLevel = cfg.LogLevel
+					}
+					if flags.LogFile == "" && cfg.LogFile != "" {
+						flags.LogFile = cfg.LogFile
+					}
+					logFile := flags.LogFile
+					if logFile == "" {
+						logFile = filepath.Join(paths.DataDir(), "project.log")
+					}
+		
+					if err := setupLogger(flags.LogLevel, logFile, flags.NoColor); err != nil {
 						return ctx, err
 					}
 					pprofAddr := ""
