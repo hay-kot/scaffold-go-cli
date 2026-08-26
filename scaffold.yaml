@@ -166,6 +166,9 @@ presets:
       - "Docker"
       - "Homebrew Tap"
     features_cli:
+      - "File Logging"
+      - "Config File"
+      - "JSON Output"
       - "Profiling"
       - "Docker Integration Tests"
     pprof_port: "6060"

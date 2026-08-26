@@ -12,11 +12,11 @@ Generate boilerplate code for a new urfave/cli/v3 project.
   - Multi architecture docker builds
   - Homebrew Tap publishing
 - GolangCI-Lint configuration
-- Taskfile for common commands/tasks
+- mise tasks for common commands
 
 ### Github Features
 
 - Issues and PR Templates
-- Release Drafter integration
+- Renovate dependency updates
 - PR Linting and Testing
 - Automatic Release Workflow

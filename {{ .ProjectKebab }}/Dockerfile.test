@@ -1,5 +1,5 @@
 {{- if .Computed.feature_docker_integration -}}
-FROM golang:1.26-bookworm AS gobase
+FROM golang:1.27-bookworm AS gobase
 
 FROM debian:bookworm-slim
 
