@@ -23,16 +23,16 @@ Expose the pprof HTTP endpoint:
 {{ .Project }} --pprof <command>
 ```
 
-By default, this listens on `127.0.0.1:{{ .Computed.pprof_port }}`. Override it with `--pprof-addr` if needed:
+The pprof server only starts when `--pprof` or `--pprof-addr` is set. It listens on `127.0.0.1:6060` by default. Override it with `--pprof-addr` if needed:
 
 ```bash
 {{ .Project }} --pprof-addr 127.0.0.1:6060 <command>
 ```
 
-Then open <http://127.0.0.1:{{ .Computed.pprof_port }}/debug/pprof/> or collect a CPU profile:
+Then open <http://127.0.0.1:6060/debug/pprof/> or collect a CPU profile:
 
 ```bash
-go tool pprof http://127.0.0.1:{{ .Computed.pprof_port }}/debug/pprof/profile?seconds=30
+go tool pprof http://127.0.0.1:6060/debug/pprof/profile?seconds=30
 ```
 
 Write profiles to disk for short-lived CLI commands:

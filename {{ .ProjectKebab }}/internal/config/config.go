@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 
 	"{{ .Scaffold.gomod }}/internal/paths"
 )
@@ -22,13 +22,21 @@ type Config struct {
 func Default() Config {
 	return Config{
 		LogLevel: "info",
+{{- if .Computed.feature_file_logging }}
+		LogFile:  "",
+{{- end }}
 	}
 }
 
 // Read loads config from the default XDG config path.
 // Returns default config if the file does not exist.
 func Read() (Config, error) {
-	return ReadFrom(filepath.Join(paths.ConfigDir(), "config.yaml"))
+	configDir, err := paths.ConfigDir()
+	if err != nil {
+		return Default(), fmt.Errorf("resolve config directory: %w", err)
+	}
+
+	return ReadFrom(filepath.Join(configDir, "config.yaml"))
 }
 
 // ReadFrom loads config from the given file path.
@@ -36,7 +44,8 @@ func Read() (Config, error) {
 func ReadFrom(path string) (Config, error) {
 	cfg := Default()
 
-	data, err := os.ReadFile(path)
+	// The config path comes from the application default or an explicit user flag.
+	data, err := os.ReadFile(path) //nolint:gosec
 	if err != nil {
 		if os.IsNotExist(err) {
 			return cfg, nil

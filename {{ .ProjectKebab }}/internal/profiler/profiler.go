@@ -1,8 +1,9 @@
-{{- if .Computed.feature_profiling }}
+{{- if .Computed.feature_profiling -}}
 package profiler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"runtime"
 	runtimepprof "runtime/pprof"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
@@ -31,7 +33,12 @@ type Profiler struct {
 
 // New creates a Profiler from options.
 func New(options Options) *Profiler {
-	return &Profiler{options: options}
+	return &Profiler{
+		options:    options,
+		server:     nil,
+		listener:   nil,
+		cpuProfile: nil,
+	}
 }
 
 // Start enables configured profilers.
@@ -43,7 +50,7 @@ func (p *Profiler) Start(ctx context.Context) error {
 	}
 
 	if p.options.HTTPAddr != "" {
-		if err := p.startHTTPServer(); err != nil {
+		if err := p.startHTTPServer(ctx); err != nil {
 			_ = p.Stop(ctx)
 			return err
 		}
@@ -59,7 +66,7 @@ func (p *Profiler) Stop(ctx context.Context) error {
 	if p.cpuProfile != nil {
 		runtimepprof.StopCPUProfile()
 		if err := p.cpuProfile.Close(); err != nil {
-			stopErr = fmt.Errorf("close CPU profile: %w", err)
+			stopErr = errors.Join(stopErr, fmt.Errorf("close CPU profile: %w", err))
 		}
 		p.cpuProfile = nil
 		log.Info().Str("path", p.options.CPUProfile).Msg("wrote CPU profile")
@@ -67,11 +74,7 @@ func (p *Profiler) Stop(ctx context.Context) error {
 
 	if p.options.HeapProfile != "" {
 		if err := writeHeapProfile(p.options.HeapProfile); err != nil {
-			if stopErr != nil {
-				stopErr = fmt.Errorf("%v; write heap profile: %w", stopErr, err)
-			} else {
-				stopErr = fmt.Errorf("write heap profile: %w", err)
-			}
+			stopErr = errors.Join(stopErr, fmt.Errorf("write heap profile: %w", err))
 		} else {
 			log.Info().Str("path", p.options.HeapProfile).Msg("wrote heap profile")
 		}
@@ -80,13 +83,10 @@ func (p *Profiler) Stop(ctx context.Context) error {
 	if p.server != nil {
 		log.Info().Str("addr", p.Addr()).Msg("shutting down pprof server")
 		if err := p.server.Shutdown(ctx); err != nil {
-			if stopErr != nil {
-				stopErr = fmt.Errorf("%v; shutdown pprof server: %w", stopErr, err)
-			} else {
-				stopErr = fmt.Errorf("shutdown pprof server: %w", err)
-			}
+			stopErr = errors.Join(stopErr, fmt.Errorf("shutdown pprof server: %w", err))
 		}
 		p.server = nil
+		p.listener = nil
 	}
 
 	return stopErr
@@ -116,8 +116,9 @@ func (p *Profiler) startCPUProfile() error {
 	return nil
 }
 
-func (p *Profiler) startHTTPServer() error {
-	listener, err := net.Listen("tcp", p.options.HTTPAddr)
+func (p *Profiler) startHTTPServer(ctx context.Context) error {
+	var listenConfig net.ListenConfig
+	listener, err := listenConfig.Listen(ctx, "tcp", p.options.HTTPAddr)
 	if err != nil {
 		return fmt.Errorf("listen for pprof server: %w", err)
 	}
@@ -129,11 +130,15 @@ func (p *Profiler) startHTTPServer() error {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
+	server := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 	p.listener = listener
-	p.server = &http.Server{Handler: mux}
+	p.server = server
 
 	go func() {
-		if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {
+		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error().Err(err).Msg("pprof server failed")
 		}
 	}()
@@ -143,7 +148,8 @@ func (p *Profiler) startHTTPServer() error {
 }
 
 func writeHeapProfile(path string) error {
-	file, err := os.Create(path)
+	// The caller explicitly selects the profile output path.
+	file, err := os.Create(path) //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("create heap profile: %w", err)
 	}

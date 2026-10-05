@@ -8,17 +8,17 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// {{ .Scaffold.command_name | toPascalCase }}Cmd implements the {{ .Scaffold.command_name }} command
+// {{ .Scaffold.command_name | toPascalCase }}Cmd implements the {{ .Scaffold.command_name }} command.
 type {{ .Scaffold.command_name | toPascalCase }}Cmd struct {
 	flags *Flags
 }
 
-// New{{ .Scaffold.command_name | toPascalCase }}Cmd creates a new {{ .Scaffold.command_name }} command
+// New{{ .Scaffold.command_name | toPascalCase }}Cmd creates a new {{ .Scaffold.command_name }} command.
 func New{{ .Scaffold.command_name | toPascalCase }}Cmd(flags *Flags) *{{ .Scaffold.command_name | toPascalCase }}Cmd {
 	return &{{ .Scaffold.command_name | toPascalCase }}Cmd{flags: flags}
 }
 
-// Register adds the {{ .Scaffold.command_name }} command to the application
+// Register adds the {{ .Scaffold.command_name }} command to the application.
 func (cmd *{{ .Scaffold.command_name | toPascalCase }}Cmd) Register(app *cli.Command) *cli.Command {
 	app.Commands = append(app.Commands, &cli.Command{
 		Name:  "{{ .Scaffold.command_name }}",
@@ -32,7 +32,7 @@ func (cmd *{{ .Scaffold.command_name | toPascalCase }}Cmd) Register(app *cli.Com
 	return app
 }
 
-func (cmd *{{ .Scaffold.command_name | toPascalCase }}Cmd) run(ctx context.Context, c *cli.Command) error {
+func (cmd *{{ .Scaffold.command_name | toPascalCase }}Cmd) run(_ context.Context, _ *cli.Command) error {
 	log.Info().Msg("running {{ .Scaffold.command_name }} command")
 
 	fmt.Println("Hello World!")

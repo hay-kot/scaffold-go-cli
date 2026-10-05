@@ -2,28 +2,64 @@ version: "2"
 linters:
   default: none
   enable:
+    - asasalint
     - asciicheck
+    - bidichk
     - bodyclose
+    - canonicalheader
+    - containedctx
+    - contextcheck
     - depguard
     - dogsled
+    - durationcheck
+    - embeddedstructfieldcheck
     - errcheck
+    - errchkjson
+    - errname
     - errorlint
     - exhaustive
+    - exhaustruct_v5
+    - fatcontext
+    - forcetypeassert
+    - gocheckcompilerdirectives
     - gochecknoinits
+    - gochecksumtype
     - goconst
     - gocritic
     - gocyclo
     - goprintffuncname
+    - gosec
     - govet
     - ineffassign
+    - makezero
+    - mirror
     - misspell
+    - modernize
+    - musttag
     - nakedret
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - perfsprint
+    - predeclared
+    - reassign
+    - recvcheck
     - revive
+    - rowserrcheck
+    - sqlclosecheck
     - staticcheck
     - tagalign
     - testifylint
+    - thelper
     - unconvert
+    - unparam
     - unused
+    - usestdlibvars
+    - usetesting
+    - wastedassign
     - whitespace
     - zerologlint
   settings:
@@ -38,9 +74,15 @@ linters:
                 preferred in new code. See the specific function documentation for
                 details.
             - pkg: github.com/pkg/errors
-              desc: Should be replaced by standard lib errors package
+              desc: Use the standard library errors package.
     exhaustive:
       default-signifies-exhaustive: true
+    exhaustruct_v5:
+      explicit-mode: true
+      enforce-patterns:
+        - '^{{ .Scaffold.gomod }}.*\.'
+      optional-patterns:
+        - '.*/commands\.Flags$'
     goconst:
       min-len: 5
       min-occurrences: 5
@@ -59,21 +101,20 @@ linters:
       enable-all: true
   exclusions:
     generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    warn-unused: true
 issues:
-  fix: true
+  fix: false
 formatters:
   enable:
     - gofumpt
+    - goimports
   exclusions:
     generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    warn-unused: true
   settings:
     gofumpt:
-      extra-rules: false
+      extra:
+        group-params: true
+    goimports:
+      local-prefixes:
+        - "{{ .Scaffold.gomod }}"

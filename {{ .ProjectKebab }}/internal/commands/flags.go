@@ -1,22 +1,22 @@
 package commands
 
-// Flags holds global flags shared across all commands
+// Flags holds global flags shared across all commands.
 type Flags struct {
 	LogLevel string
 	NoColor  bool
-{{- if .Computed.feature_profiling }}
+{{ if .Computed.feature_profiling }}
 	Pprof       bool
 	PprofAddr   string
 	CPUProfile  string
 	HeapProfile string
-{{- end }}
-{{- if .Computed.feature_file_logging }}
-	LogFile  string
-{{- end }}
-{{- if .Computed.feature_config_file }}
+{{ end -}}
+{{ if .Computed.feature_file_logging }}
+	LogFile string
+{{ end -}}
+{{ if .Computed.feature_config_file }}
 	ConfigFile string
-{{- end }}
-{{- if .Computed.feature_json_output }}
+{{ end -}}
+{{ if .Computed.feature_json_output }}
 	JSON bool
-{{- end }}
+{{ end -}}
 }

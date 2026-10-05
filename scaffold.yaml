@@ -26,19 +26,23 @@ questions:
     prompt:
       message: "Go Module Path"
       description: "e.g. github.com/username/project"
+    validate:
+      required: true
   - name: "full_name"
     group: "default"
     prompt:
-      message: "Developers Name"
-      description: "For License and README"
-    required: true
+      message: "Developer Name"
+      description: "For the license and README"
+    validate:
+      required: true
   - name: "description"
     group: "default"
     prompt:
       message: "Description"
       description: "A short description of the project"
       multi: true
-    required: true
+    validate:
+      required: true
   - name: "open_source_license"
     group: "default"
     prompt:
@@ -99,21 +103,14 @@ questions:
         - "Profiling"
         - "Docker Integration Tests"
 
-  - name: "pprof_port"
-    group: "cli"
-    when: '{{ has "Profiling" .features_cli }}'
-    prompt:
-      message: "Default pprof Port"
-      description: "Stable default pprof port for this CLI"
-      default: "{{ randInt 49152 65535 }}"
-
   - name: "docker_registry_url"
     group: "docker"
     when: '{{ has "Docker" .features_publishing }}'
     prompt:
-      message: "Docker Registry"
-      description: "Registry package url (e.g ghcr.io/hay-kot/scaffold)"
-      default: "ghcr.io"
+      message: "Docker Image"
+      description: "Full image name (e.g. ghcr.io/owner/project)"
+    validate:
+      required: true
 
   - name: "homebrew_owner"
     group: "homebrew_tap"
@@ -121,13 +118,16 @@ questions:
     prompt:
       message: "Homebrew Tap Owner"
       description: "Tap repository owner"
+    validate:
+      required: true
   - name: "homebrew_name"
     group: "homebrew_tap"
     when: '{{ has "Homebrew Tap" .features_publishing }}'
     prompt:
       message: "Homebrew Tap Name"
       description: "e.g. homebrew-scaffold-tap"
-      default: "homebrew-"
+    validate:
+      required: true
 
 computed:
   feature_gh_actions: '{{ has "Github Actions" .Scaffold.features_cicd }}'
@@ -140,7 +140,6 @@ computed:
   feature_json_output: '{{ has "JSON Output" .Scaffold.features_cli }}'
   feature_profiling: '{{ has "Profiling" .Scaffold.features_cli }}'
   feature_docker_integration: '{{ has "Docker Integration Tests" .Scaffold.features_cli }}'
-  pprof_port: '{{ default (randInt 49152 65535) .Scaffold.pprof_port }}'
 
 delimiters:
   # since goreleaser uses go templates we can override the delimiters to make
@@ -171,7 +170,6 @@ presets:
       - "JSON Output"
       - "Profiling"
       - "Docker Integration Tests"
-    pprof_port: "6060"
     docker_registry_url: ghcr.io/hay-kot/scaffold-go-cli
     homebrew_owner: "hay-kot"
     homebrew_name: "homebrew-scaffold-go-cli-tap"
