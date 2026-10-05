@@ -113,7 +113,7 @@ cli-test:  (type=dir)
 				      - uses: actions/checkout@v7
 				
 				      - name: Install tools
-				        uses: jdx/mise-action@v4
+				        uses: jdx/mise-action@v5
 				
 				      - name: golangci-lint
 				        uses: golangci/golangci-lint-action@v9
@@ -251,28 +251,64 @@ cli-test:  (type=dir)
 		linters:
 		  default: none
 		  enable:
+		    - asasalint
 		    - asciicheck
+		    - bidichk
 		    - bodyclose
+		    - canonicalheader
+		    - containedctx
+		    - contextcheck
 		    - depguard
 		    - dogsled
+		    - durationcheck
+		    - embeddedstructfieldcheck
 		    - errcheck
+		    - errchkjson
+		    - errname
 		    - errorlint
 		    - exhaustive
+		    - exhaustruct_v5
+		    - fatcontext
+		    - forcetypeassert
+		    - gocheckcompilerdirectives
 		    - gochecknoinits
+		    - gochecksumtype
 		    - goconst
 		    - gocritic
 		    - gocyclo
 		    - goprintffuncname
+		    - gosec
 		    - govet
 		    - ineffassign
+		    - makezero
+		    - mirror
 		    - misspell
+		    - modernize
+		    - musttag
 		    - nakedret
+		    - nilerr
+		    - nilnesserr
+		    - nilnil
+		    - noctx
+		    - nolintlint
+		    - nosprintfhostport
+		    - perfsprint
+		    - predeclared
+		    - reassign
+		    - recvcheck
 		    - revive
+		    - rowserrcheck
+		    - sqlclosecheck
 		    - staticcheck
 		    - tagalign
 		    - testifylint
+		    - thelper
 		    - unconvert
+		    - unparam
 		    - unused
+		    - usestdlibvars
+		    - usetesting
+		    - wastedassign
 		    - whitespace
 		    - zerologlint
 		  settings:
@@ -287,9 +323,15 @@ cli-test:  (type=dir)
 		                preferred in new code. See the specific function documentation for
 		                details.
 		            - pkg: github.com/pkg/errors
-		              desc: Should be replaced by standard lib errors package
+		              desc: Use the standard library errors package.
 		    exhaustive:
 		      default-signifies-exhaustive: true
+		    exhaustruct_v5:
+		      explicit-mode: true
+		      enforce-patterns:
+		        - '^github.com/username/project.*\.'
+		      optional-patterns:
+		        - '.*/commands\.Flags$'
 		    goconst:
 		      min-len: 5
 		      min-occurrences: 5
@@ -308,24 +350,23 @@ cli-test:  (type=dir)
 		      enable-all: true
 		  exclusions:
 		    generated: lax
-		    paths:
-		      - third_party$
-		      - builtin$
-		      - examples$
+		    warn-unused: true
 		issues:
-		  fix: true
+		  fix: false
 		formatters:
 		  enable:
 		    - gofumpt
+		    - goimports
 		  exclusions:
 		    generated: lax
-		    paths:
-		      - third_party$
-		      - builtin$
-		      - examples$
+		    warn-unused: true
 		  settings:
 		    gofumpt:
-		      extra-rules: false
+		      extra:
+		        group-params: true
+		    goimports:
+		      local-prefixes:
+		        - "github.com/username/project"
 		
 	.goreleaser.yml:  (type=file)
 		# This is an example .goreleaser.yml file with some sensible defaults.
@@ -475,17 +516,17 @@ cli-test:  (type=dir)
 								"github.com/urfave/cli/v3"
 							)
 							
-							// {{ .Scaffold.command_name | toPascalCase }}Cmd implements the {{ .Scaffold.command_name }} command
+							// {{ .Scaffold.command_name | toPascalCase }}Cmd implements the {{ .Scaffold.command_name }} command.
 							type {{ .Scaffold.command_name | toPascalCase }}Cmd struct {
 								flags *Flags
 							}
 							
-							// New{{ .Scaffold.command_name | toPascalCase }}Cmd creates a new {{ .Scaffold.command_name }} command
+							// New{{ .Scaffold.command_name | toPascalCase }}Cmd creates a new {{ .Scaffold.command_name }} command.
 							func New{{ .Scaffold.command_name | toPascalCase }}Cmd(flags *Flags) *{{ .Scaffold.command_name | toPascalCase }}Cmd {
 								return &{{ .Scaffold.command_name | toPascalCase }}Cmd{flags: flags}
 							}
 							
-							// Register adds the {{ .Scaffold.command_name }} command to the application
+							// Register adds the {{ .Scaffold.command_name }} command to the application.
 							func (cmd *{{ .Scaffold.command_name | toPascalCase }}Cmd) Register(app *cli.Command) *cli.Command {
 								app.Commands = append(app.Commands, &cli.Command{
 									Name:  "{{ .Scaffold.command_name }}",
@@ -499,7 +540,7 @@ cli-test:  (type=dir)
 								return app
 							}
 							
-							func (cmd *{{ .Scaffold.command_name | toPascalCase }}Cmd) run(ctx context.Context, c *cli.Command) error {
+							func (cmd *{{ .Scaffold.command_name | toPascalCase }}Cmd) run(_ context.Context, _ *cli.Command) error {
 								log.Info().Msg("running {{ .Scaffold.command_name }} command")
 							
 								fmt.Println("Hello World!")
@@ -630,7 +671,7 @@ cli-test:  (type=dir)
 		cli-test --pprof <command>
 		```
 		
-		By default, this listens on `127.0.0.1:6060`. Override it with `--pprof-addr` if needed:
+		The pprof server only starts when `--pprof` or `--pprof-addr` is set. It listens on `127.0.0.1:6060` by default. Override it with `--pprof-addr` if needed:
 		
 		```bash
 		cli-test --pprof-addr 127.0.0.1:6060 <command>
@@ -657,53 +698,51 @@ cli-test:  (type=dir)
 		
 		require (
 			github.com/rs/zerolog v1.35.1
-			github.com/urfave/cli/v3 v3.11.0
-			gopkg.in/yaml.v3 v3.0.1
+			github.com/urfave/cli/v3 v3.14.0
+			go.yaml.in/yaml/v3 v3.0.5
 		)
 		
 		require (
 			github.com/mattn/go-colorable v0.1.15 // indirect
 			github.com/mattn/go-isatty v0.0.24 // indirect
-			golang.org/x/sys v0.47.0 // indirect
+			golang.org/x/sys v0.48.0 // indirect
 		)
 		
 	go.sum:  (type=file)
-		github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
-		github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 		github.com/mattn/go-colorable v0.1.15 h1:+u9SLTRGnXv73cEsnsmoZBom+dMU88B2M0aDcWy0/jY=
 		github.com/mattn/go-colorable v0.1.15/go.mod h1:6LmQG8QLFO4G5z1gPvYEzlUgJ2wF+stgPZH1UqBm1s8=
 		github.com/mattn/go-isatty v0.0.24 h1:tGZZoVgT/KiqK1c8ocVLeDS8BSWMRd47J3Lbz7vsReI=
 		github.com/mattn/go-isatty v0.0.24/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI3HqDio6A=
-		github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
-		github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 		github.com/rs/zerolog v1.35.1 h1:m7xQeoiLIiV0BCEY4Hs+j2NG4Gp2o2KPKmhnnLiazKI=
 		github.com/rs/zerolog v1.35.1/go.mod h1:EjML9kdfa/RMA7h/6z6pYmq1ykOuA8/mjWaEvGI+jcw=
-		github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
-		github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-		github.com/urfave/cli/v3 v3.11.0 h1:P/euJp99kb9p0tlVY+iYTLYYTAQlfl0hR2gUO1Img1Q=
-		github.com/urfave/cli/v3 v3.11.0/go.mod h1:ysVLtOEmg2tOy6PknnYVhDoouyC/6N42TMeoMzskhso=
-		golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
-		golang.org/x/sys v0.47.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
-		gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
-		gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-		gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
-		gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+		github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
+		github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
+		github.com/urfave/cli/v3 v3.14.0 h1:a8414NQlHJs0c/iBsulKLzlES0n/lEAskbL2LKpU4/s=
+		github.com/urfave/cli/v3 v3.14.0/go.mod h1:vXn6HxPNccJSzQr2QvwVncOKrgYGIHU0HY5h8B2nQj4=
+		go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
+		go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
+		golang.org/x/sys v0.48.0 h1:bbX/i/6MgT9BVLM9RT1thmxL04yeTAhbEz4SyadbXoo=
+		golang.org/x/sys v0.48.0/go.mod h1:hNLxWAXmnKAxqDtdwIYC4bM9oQPEecfsnNMuSxOs3og=
 		
 	internal:  (type=dir)
 		commands:  (type=dir)
 			flags.go:  (type=file)
 				package commands
 				
-				// Flags holds global flags shared across all commands
+				// Flags holds global flags shared across all commands.
 				type Flags struct {
 					LogLevel string
 					NoColor  bool
+				
 					Pprof       bool
 					PprofAddr   string
 					CPUProfile  string
 					HeapProfile string
-					LogFile  string
+				
+					LogFile string
+				
 					ConfigFile string
+				
 					JSON bool
 				}
 				
@@ -720,17 +759,17 @@ cli-test:  (type=dir)
 					"github.com/urfave/cli/v3"
 				)
 				
-				// GoodbyeCmd implements the goodbye command
+				// GoodbyeCmd implements the goodbye command.
 				type GoodbyeCmd struct {
 					flags *Flags
 				}
 				
-				// NewGoodbyeCmd creates a new goodbye command
+				// NewGoodbyeCmd creates a new goodbye command.
 				func NewGoodbyeCmd(flags *Flags) *GoodbyeCmd {
 					return &GoodbyeCmd{flags: flags}
 				}
 				
-				// Register adds the goodbye command to the application
+				// Register adds the goodbye command to the application.
 				func (cmd *GoodbyeCmd) Register(app *cli.Command) *cli.Command {
 					app.Commands = append(app.Commands, &cli.Command{
 						Name:  "goodbye",
@@ -744,7 +783,7 @@ cli-test:  (type=dir)
 					return app
 				}
 				
-				func (cmd *GoodbyeCmd) run(ctx context.Context, c *cli.Command) error {
+				func (cmd *GoodbyeCmd) run(_ context.Context, _ *cli.Command) error {
 					log.Info().Msg("running goodbye command")
 					if cmd.flags.JSON {
 						return json.NewEncoder(os.Stdout).Encode(map[string]string{
@@ -770,17 +809,17 @@ cli-test:  (type=dir)
 					"github.com/urfave/cli/v3"
 				)
 				
-				// HelloCmd implements the hello command
+				// HelloCmd implements the hello command.
 				type HelloCmd struct {
 					flags *Flags
 				}
 				
-				// NewHelloCmd creates a new hello command
+				// NewHelloCmd creates a new hello command.
 				func NewHelloCmd(flags *Flags) *HelloCmd {
 					return &HelloCmd{flags: flags}
 				}
 				
-				// Register adds the hello command to the application
+				// Register adds the hello command to the application.
 				func (cmd *HelloCmd) Register(app *cli.Command) *cli.Command {
 					app.Commands = append(app.Commands, &cli.Command{
 						Name:  "hello",
@@ -794,7 +833,7 @@ cli-test:  (type=dir)
 					return app
 				}
 				
-				func (cmd *HelloCmd) run(ctx context.Context, c *cli.Command) error {
+				func (cmd *HelloCmd) run(_ context.Context, _ *cli.Command) error {
 					log.Info().Msg("running hello command")
 					if cmd.flags.JSON {
 						return json.NewEncoder(os.Stdout).Encode(map[string]string{
@@ -816,7 +855,7 @@ cli-test:  (type=dir)
 					"os"
 					"path/filepath"
 				
-					"gopkg.in/yaml.v3"
+					"go.yaml.in/yaml/v3"
 				
 					"github.com/username/project/internal/paths"
 				)
@@ -831,13 +870,19 @@ cli-test:  (type=dir)
 				func Default() Config {
 					return Config{
 						LogLevel: "info",
+						LogFile:  "",
 					}
 				}
 				
 				// Read loads config from the default XDG config path.
 				// Returns default config if the file does not exist.
 				func Read() (Config, error) {
-					return ReadFrom(filepath.Join(paths.ConfigDir(), "config.yaml"))
+					configDir, err := paths.ConfigDir()
+					if err != nil {
+						return Default(), fmt.Errorf("resolve config directory: %w", err)
+					}
+				
+					return ReadFrom(filepath.Join(configDir, "config.yaml"))
 				}
 				
 				// ReadFrom loads config from the given file path.
@@ -845,7 +890,8 @@ cli-test:  (type=dir)
 				func ReadFrom(path string) (Config, error) {
 					cfg := Default()
 				
-					data, err := os.ReadFile(path)
+					// The config path comes from the application default or an explicit user flag.
+					data, err := os.ReadFile(path) //nolint:gosec
 					if err != nil {
 						if os.IsNotExist(err) {
 							return cfg, nil
@@ -861,11 +907,49 @@ cli-test:  (type=dir)
 					return cfg, nil
 				}
 				
+			config_test.go:  (type=file)
+				package config
+				
+				import (
+					"os"
+					"path/filepath"
+					"testing"
+				)
+				
+				func TestReadFromMissingFileReturnsDefaults(t *testing.T) {
+					cfg, err := ReadFrom(filepath.Join(t.TempDir(), "missing.yaml"))
+					if err != nil {
+						t.Fatalf("ReadFrom() error = %v", err)
+					}
+				
+					want := Default()
+					if cfg != want {
+						t.Fatalf("ReadFrom() = %#v, want %#v", cfg, want)
+					}
+				}
+				
+				func TestReadFromIgnoresUnknownFields(t *testing.T) {
+					path := filepath.Join(t.TempDir(), "config.yaml")
+					data := []byte("log_level: debug\nplugin_setting: enabled\n")
+					if err := os.WriteFile(path, data, 0o600); err != nil {
+						t.Fatalf("write config: %v", err)
+					}
+				
+					cfg, err := ReadFrom(path)
+					if err != nil {
+						t.Fatalf("ReadFrom() error = %v", err)
+					}
+					if cfg.LogLevel != "debug" {
+						t.Fatalf("ReadFrom().LogLevel = %q, want %q", cfg.LogLevel, "debug")
+					}
+				}
+				
 		paths:  (type=dir)
 			paths.go:  (type=file)
 				package paths
 				
 				import (
+					"fmt"
 					"os"
 					"path/filepath"
 				)
@@ -873,45 +957,78 @@ cli-test:  (type=dir)
 				const appName = "project"
 				
 				// ConfigDir returns the XDG config directory for the application.
-				// Uses $XDG_CONFIG_HOME/<app> or falls back to ~/.config/<app>.
-				func ConfigDir() string {
-					if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
-						return filepath.Join(dir, appName)
-					}
-				
-					home, _ := os.UserHomeDir()
-					return filepath.Join(home, ".config", appName)
+				func ConfigDir() (string, error) {
+					return appDir("XDG_CONFIG_HOME", ".config")
 				}
 				
 				// DataDir returns the XDG data directory for the application.
-				// Uses $XDG_DATA_HOME/<app> or falls back to ~/.local/share/<app>.
-				func DataDir() string {
-					if dir := os.Getenv("XDG_DATA_HOME"); dir != "" {
-						return filepath.Join(dir, appName)
-					}
-				
-					home, _ := os.UserHomeDir()
-					return filepath.Join(home, ".local", "share", appName)
+				func DataDir() (string, error) {
+					return appDir("XDG_DATA_HOME", ".local", "share")
 				}
 				
 				// CacheDir returns the XDG cache directory for the application.
-				// Uses $XDG_CACHE_HOME/<app> or falls back to ~/.cache/<app>.
-				func CacheDir() string {
-					if dir := os.Getenv("XDG_CACHE_HOME"); dir != "" {
-						return filepath.Join(dir, appName)
+				func CacheDir() (string, error) {
+					return appDir("XDG_CACHE_HOME", ".cache")
+				}
+				
+				func appDir(envName string, fallbackParts ...string) (string, error) {
+					if dir := os.Getenv(envName); dir != "" {
+						return filepath.Join(dir, appName), nil
 					}
 				
-					home, _ := os.UserHomeDir()
-					return filepath.Join(home, ".cache", appName)
+					home, err := os.UserHomeDir()
+					if err != nil {
+						return "", fmt.Errorf("resolve home directory: %w", err)
+					}
+				
+					parts := append([]string{home}, fallbackParts...)
+					return filepath.Join(append(parts, appName)...), nil
+				}
+				
+			paths_test.go:  (type=file)
+				package paths
+				
+				import (
+					"path/filepath"
+					"testing"
+				)
+				
+				func TestXDGDirectories(t *testing.T) {
+					tests := []struct {
+						name    string
+						envName string
+						resolve func() (string, error)
+					}{
+						{name: "config", envName: "XDG_CONFIG_HOME", resolve: ConfigDir},
+						{name: "data", envName: "XDG_DATA_HOME", resolve: DataDir},
+						{name: "cache", envName: "XDG_CACHE_HOME", resolve: CacheDir},
+					}
+				
+					for _, test := range tests {
+						t.Run(test.name, func(t *testing.T) {
+							baseDir := t.TempDir()
+							t.Setenv(test.envName, baseDir)
+				
+							dir, err := test.resolve()
+							if err != nil {
+								t.Fatalf("resolve directory: %v", err)
+							}
+				
+							want := filepath.Join(baseDir, appName)
+							if dir != want {
+								t.Fatalf("directory = %q, want %q", dir, want)
+							}
+						})
+					}
 				}
 				
 		profiler:  (type=dir)
 			profiler.go:  (type=file)
-				
 				package profiler
 				
 				import (
 					"context"
+					"errors"
 					"fmt"
 					"net"
 					"net/http"
@@ -919,6 +1036,7 @@ cli-test:  (type=dir)
 					"os"
 					"runtime"
 					runtimepprof "runtime/pprof"
+					"time"
 				
 					"github.com/rs/zerolog/log"
 				)
@@ -940,7 +1058,12 @@ cli-test:  (type=dir)
 				
 				// New creates a Profiler from options.
 				func New(options Options) *Profiler {
-					return &Profiler{options: options}
+					return &Profiler{
+						options:    options,
+						server:     nil,
+						listener:   nil,
+						cpuProfile: nil,
+					}
 				}
 				
 				// Start enables configured profilers.
@@ -952,7 +1075,7 @@ cli-test:  (type=dir)
 					}
 				
 					if p.options.HTTPAddr != "" {
-						if err := p.startHTTPServer(); err != nil {
+						if err := p.startHTTPServer(ctx); err != nil {
 							_ = p.Stop(ctx)
 							return err
 						}
@@ -968,7 +1091,7 @@ cli-test:  (type=dir)
 					if p.cpuProfile != nil {
 						runtimepprof.StopCPUProfile()
 						if err := p.cpuProfile.Close(); err != nil {
-							stopErr = fmt.Errorf("close CPU profile: %w", err)
+							stopErr = errors.Join(stopErr, fmt.Errorf("close CPU profile: %w", err))
 						}
 						p.cpuProfile = nil
 						log.Info().Str("path", p.options.CPUProfile).Msg("wrote CPU profile")
@@ -976,11 +1099,7 @@ cli-test:  (type=dir)
 				
 					if p.options.HeapProfile != "" {
 						if err := writeHeapProfile(p.options.HeapProfile); err != nil {
-							if stopErr != nil {
-								stopErr = fmt.Errorf("%v; write heap profile: %w", stopErr, err)
-							} else {
-								stopErr = fmt.Errorf("write heap profile: %w", err)
-							}
+							stopErr = errors.Join(stopErr, fmt.Errorf("write heap profile: %w", err))
 						} else {
 							log.Info().Str("path", p.options.HeapProfile).Msg("wrote heap profile")
 						}
@@ -989,13 +1108,10 @@ cli-test:  (type=dir)
 					if p.server != nil {
 						log.Info().Str("addr", p.Addr()).Msg("shutting down pprof server")
 						if err := p.server.Shutdown(ctx); err != nil {
-							if stopErr != nil {
-								stopErr = fmt.Errorf("%v; shutdown pprof server: %w", stopErr, err)
-							} else {
-								stopErr = fmt.Errorf("shutdown pprof server: %w", err)
-							}
+							stopErr = errors.Join(stopErr, fmt.Errorf("shutdown pprof server: %w", err))
 						}
 						p.server = nil
+						p.listener = nil
 					}
 				
 					return stopErr
@@ -1025,8 +1141,9 @@ cli-test:  (type=dir)
 					return nil
 				}
 				
-				func (p *Profiler) startHTTPServer() error {
-					listener, err := net.Listen("tcp", p.options.HTTPAddr)
+				func (p *Profiler) startHTTPServer(ctx context.Context) error {
+					var listenConfig net.ListenConfig
+					listener, err := listenConfig.Listen(ctx, "tcp", p.options.HTTPAddr)
 					if err != nil {
 						return fmt.Errorf("listen for pprof server: %w", err)
 					}
@@ -1038,11 +1155,15 @@ cli-test:  (type=dir)
 					mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 					mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 				
+					server := &http.Server{
+						Handler:           mux,
+						ReadHeaderTimeout: 5 * time.Second,
+					}
 					p.listener = listener
-					p.server = &http.Server{Handler: mux}
+					p.server = server
 				
 					go func() {
-						if err := p.server.Serve(listener); err != nil && err != http.ErrServerClosed {
+						if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 							log.Error().Err(err).Msg("pprof server failed")
 						}
 					}()
@@ -1052,7 +1173,8 @@ cli-test:  (type=dir)
 				}
 				
 				func writeHeapProfile(path string) error {
-					file, err := os.Create(path)
+					// The caller explicitly selects the profile output path.
+					file, err := os.Create(path) //nolint:gosec
 					if err != nil {
 						return fmt.Errorf("create heap profile: %w", err)
 					}
@@ -1069,7 +1191,6 @@ cli-test:  (type=dir)
 				}
 				
 			profiler_test.go:  (type=file)
-				
 				package profiler
 				
 				import (
@@ -1082,9 +1203,14 @@ cli-test:  (type=dir)
 				)
 				
 				func TestProfilerHTTPServer(t *testing.T) {
-					profiler := New(Options{HTTPAddr: "127.0.0.1:0"})
+					profiler := New(Options{
+						HTTPAddr:    "127.0.0.1:0",
+						CPUProfile:  "",
+						HeapProfile: "",
+					})
+					ctx := context.Background()
 				
-					if err := profiler.Start(context.Background()); err != nil {
+					if err := profiler.Start(ctx); err != nil {
 						t.Fatalf("Start() error = %v", err)
 					}
 				
@@ -1096,7 +1222,11 @@ cli-test:  (type=dir)
 						}
 					}()
 				
-					resp, err := http.Get("http://" + profiler.Addr() + "/debug/pprof/")
+					req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+profiler.Addr()+"/debug/pprof/", nil)
+					if err != nil {
+						t.Fatalf("create pprof index request: %v", err)
+					}
+					resp, err := http.DefaultClient.Do(req)
 					if err != nil {
 						t.Fatalf("GET pprof index error = %v", err)
 					}
@@ -1117,6 +1247,7 @@ cli-test:  (type=dir)
 					heapProfile := filepath.Join(tmpDir, "heap.pprof")
 				
 					profiler := New(Options{
+						HTTPAddr:    "",
 						CPUProfile:  cpuProfile,
 						HeapProfile: heapProfile,
 					})
@@ -1125,7 +1256,7 @@ cli-test:  (type=dir)
 						t.Fatalf("Start() error = %v", err)
 					}
 				
-					for i := 0; i < 100000; i++ {
+					for i := range 100000 {
 						_ = i * i
 					}
 				
@@ -1155,13 +1286,13 @@ cli-test:  (type=dir)
 		import (
 			"context"
 			"fmt"
+			"io"
 			"os"
 			"os/signal"
+			"path/filepath"
 			"runtime/debug"
 			"syscall"
 			"time"
-			"io"
-			"path/filepath"
 		
 			"github.com/rs/zerolog"
 			"github.com/rs/zerolog/log"
@@ -1202,7 +1333,8 @@ cli-test:  (type=dir)
 		
 			return fmt.Sprintf("%s (%s) %s", version, short, date)
 		}
-		func setupLogger(level string, logFile string, noColor bool) error {
+		
+		func setupLogger(level, logFile string, noColor bool) error {
 			parsedLevel, err := zerolog.ParseLevel(level)
 			if err != nil {
 				return fmt.Errorf("failed to parse log level: %w", err)
@@ -1211,19 +1343,17 @@ cli-test:  (type=dir)
 			var output io.Writer = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor}
 		
 			if logFile != "" {
-				// Create log directory if it doesn't exist
 				logDir := filepath.Dir(logFile)
-				if err := os.MkdirAll(logDir, 0755); err != nil {
+				if err := os.MkdirAll(logDir, 0o750); err != nil {
 					return fmt.Errorf("failed to create log directory: %w", err)
 				}
 		
-				// Open log file
-				file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+				// The log path comes from the application default, config, or an explicit user flag.
+				file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600) //nolint:gosec
 				if err != nil {
 					return fmt.Errorf("failed to open log file: %w", err)
 				}
 		
-				// Write to both console and file
 				output = io.MultiWriter(
 					zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor},
 					file,
@@ -1243,7 +1373,11 @@ cli-test:  (type=dir)
 			log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 		
 			flags := &commands.Flags{}
-			prof := profiler.New(profiler.Options{})
+			prof := profiler.New(profiler.Options{
+				HTTPAddr:    "",
+				CPUProfile:  "",
+				HeapProfile: "",
+			})
 		
 			app := &cli.Command{
 				Name:                  "cli-test",
@@ -1318,15 +1452,19 @@ cli-test:  (type=dir)
 						return ctx, fmt.Errorf("loading config: %w", err)
 					}
 		
-					if flags.LogLevel == "info" && cfg.LogLevel != "" {
+					if !c.IsSet("log-level") && cfg.LogLevel != "" {
 						flags.LogLevel = cfg.LogLevel
 					}
-					if flags.LogFile == "" && cfg.LogFile != "" {
+					if !c.IsSet("log-file") && cfg.LogFile != "" {
 						flags.LogFile = cfg.LogFile
 					}
 					logFile := flags.LogFile
 					if logFile == "" {
-						logFile = filepath.Join(paths.DataDir(), "project.log")
+						dataDir, err := paths.DataDir()
+						if err != nil {
+							return ctx, fmt.Errorf("resolve data directory: %w", err)
+						}
+						logFile = filepath.Join(dataDir, "project.log")
 					}
 		
 					if err := setupLogger(flags.LogLevel, logFile, flags.NoColor); err != nil {
@@ -1347,8 +1485,8 @@ cli-test:  (type=dir)
 		
 					return ctx, nil
 				},
-				After: func(ctx context.Context, c *cli.Command) error {
-					shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				After: func(ctx context.Context, _ *cli.Command) error {
+					shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 					defer cancel()
 					if err := prof.Stop(shutdownCtx); err != nil {
 						return fmt.Errorf("stop profiler: %w", err)
@@ -1471,10 +1609,10 @@ cli-test:  (type=dir)
 				
 				// Harness runs the built CLI binary with isolated per-test state.
 				type Harness struct {
-					t        *testing.T
-					homeDir  string
-					dataDir  string
-					cacheDir string
+					t         *testing.T
+					homeDir   string
+					dataDir   string
+					cacheDir  string
 					configDir string
 				}
 				

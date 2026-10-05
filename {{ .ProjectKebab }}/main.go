@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
+{{- if .Computed.feature_file_logging }}
+	"io"
+{{- end }}
 	"os"
 	"os/signal"
+{{- if .Computed.feature_file_logging }}
+	"path/filepath"
+{{- end }}
 	"runtime/debug"
 	"syscall"
 {{- if .Computed.feature_profiling }}
 	"time"
-{{- end }}
-{{- if .Computed.feature_file_logging }}
-	"io"
-	"path/filepath"
 {{- end }}
 
 	"github.com/rs/zerolog"
@@ -60,9 +62,8 @@ func build() string {
 
 	return fmt.Sprintf("%s (%s) %s", version, short, date)
 }
-
-{{- if .Computed.feature_file_logging }}
-func setupLogger(level string, logFile string, noColor bool) error {
+{{ if .Computed.feature_file_logging }}
+func setupLogger(level, logFile string, noColor bool) error {
 	parsedLevel, err := zerolog.ParseLevel(level)
 	if err != nil {
 		return fmt.Errorf("failed to parse log level: %w", err)
@@ -71,19 +72,17 @@ func setupLogger(level string, logFile string, noColor bool) error {
 	var output io.Writer = zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor}
 
 	if logFile != "" {
-		// Create log directory if it doesn't exist
 		logDir := filepath.Dir(logFile)
-		if err := os.MkdirAll(logDir, 0755); err != nil {
+		if err := os.MkdirAll(logDir, 0o750); err != nil {
 			return fmt.Errorf("failed to create log directory: %w", err)
 		}
 
-		// Open log file
-		file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		// The log path comes from the application default, config, or an explicit user flag.
+		file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600) //nolint:gosec
 		if err != nil {
 			return fmt.Errorf("failed to open log file: %w", err)
 		}
 
-		// Write to both console and file
 		output = io.MultiWriter(
 			zerolog.ConsoleWriter{Out: os.Stderr, NoColor: noColor},
 			file,
@@ -116,7 +115,11 @@ func run() int {
 
 	flags := &commands.Flags{}
 {{- if .Computed.feature_profiling }}
-	prof := profiler.New(profiler.Options{})
+	prof := profiler.New(profiler.Options{
+		HTTPAddr:    "",
+		CPUProfile:  "",
+		HeapProfile: "",
+	})
 {{- end }}
 
 	app := &cli.Command{
@@ -165,7 +168,7 @@ func run() int {
 				Name:        "pprof-addr",
 				Usage:       "pprof HTTP endpoint address",
 				Sources:     cli.EnvVars("PPROF_ADDR"),
-				Value:       "127.0.0.1:{{ .Computed.pprof_port }}",
+				Value:       "127.0.0.1:6060",
 				Destination: &flags.PprofAddr,
 			},
 			&cli.StringFlag{
@@ -201,11 +204,11 @@ func run() int {
 				return ctx, fmt.Errorf("loading config: %w", err)
 			}
 
-			if flags.LogLevel == "info" && cfg.LogLevel != "" {
+			if !c.IsSet("log-level") && cfg.LogLevel != "" {
 				flags.LogLevel = cfg.LogLevel
 			}
 {{- if .Computed.feature_file_logging }}
-			if flags.LogFile == "" && cfg.LogFile != "" {
+			if !c.IsSet("log-file") && cfg.LogFile != "" {
 				flags.LogFile = cfg.LogFile
 			}
 {{- end }}
@@ -213,7 +216,11 @@ func run() int {
 {{- if .Computed.feature_file_logging }}
 			logFile := flags.LogFile
 			if logFile == "" {
-				logFile = filepath.Join(paths.DataDir(), "{{ .Scaffold.gomod | pathBase }}.log")
+				dataDir, err := paths.DataDir()
+				if err != nil {
+					return ctx, fmt.Errorf("resolve data directory: %w", err)
+				}
+				logFile = filepath.Join(dataDir, "{{ .Scaffold.gomod | pathBase }}.log")
 			}
 
 			if err := setupLogger(flags.LogLevel, logFile, flags.NoColor); err != nil {
@@ -242,8 +249,8 @@ func run() int {
 			return ctx, nil
 		},
 {{- if .Computed.feature_profiling }}
-		After: func(ctx context.Context, c *cli.Command) error {
-			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		After: func(ctx context.Context, _ *cli.Command) error {
+			shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 			defer cancel()
 			if err := prof.Stop(shutdownCtx); err != nil {
 				return fmt.Errorf("stop profiler: %w", err)

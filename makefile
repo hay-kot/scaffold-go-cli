@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 .PHONY: snapshot
 snapshot:
-	scaffold new --output-dir=":memory:" --preset="test" --no-prompt --snapshot="stdout" ./
+	scaffold new --output-dir=":memory:" --preset="test" --no-prompt --snapshot="stdout" "$(CURDIR)"
 
 DATE_RE := [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}
 
@@ -10,23 +10,26 @@ DATE_RE := [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}
 test/snapshot:
 	diff -u \
 		<(sed 's/$(DATE_RE)/DATE/g' snapshots/test.snapshot) \
-		<(scaffold new --output-dir=":memory:" --preset="test" --no-prompt --snapshot="stdout" ./ | sed 's/$(DATE_RE)/DATE/g')
+		<(scaffold new --output-dir=":memory:" --preset="test" --no-prompt --snapshot="stdout" "$(CURDIR)" | sed 's/$(DATE_RE)/DATE/g')
 
 .PHONY: test/snapshot/update
 test/snapshot/update:
-	scaffold new --output-dir=":memory:" --preset="test" --no-prompt --snapshot="stdout" ./ | sed 's/$(DATE_RE)/DATE/g' > snapshots/test.snapshot
+	scaffold new --output-dir=":memory:" --preset="test" --no-prompt --snapshot="stdout" "$(CURDIR)" | sed 's/$(DATE_RE)/DATE/g' > snapshots/test.snapshot
 
 .PHONY: test/run
 test/run:
 	rm -rf /tmp/scaffold-test/
 	# render output
-	scaffold --log-level="debug" new --output-dir="/tmp/scaffold-test/" --preset="test" --no-prompt ./
+	scaffold --log-level="debug" new --output-dir="/tmp/scaffold-test/" --preset="test" --no-prompt "$(CURDIR)"
 
 	ls /tmp/scaffold-test/cli-test/
 
+	# test all generated packages
+	cd /tmp/scaffold-test/cli-test && go test ./...
+
 	# run binary, output should be "Hello World!"
 	cd /tmp/scaffold-test/cli-test && \
-		output=$$(go run main.go hello); \
+		output=$$(go run . hello); \
 		if [ "$$output" = "Hello World!" ]; then \
 			echo "Output is correct: $$output"; \
 		else \

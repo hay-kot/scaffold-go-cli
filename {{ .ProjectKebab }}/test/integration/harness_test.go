@@ -18,10 +18,10 @@ const commandTimeout = 30 * time.Second
 
 // Harness runs the built CLI binary with isolated per-test state.
 type Harness struct {
-	t        *testing.T
-	homeDir  string
-	dataDir  string
-	cacheDir string
+	t         *testing.T
+	homeDir   string
+	dataDir   string
+	cacheDir  string
 	configDir string
 }
 

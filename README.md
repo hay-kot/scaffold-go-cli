@@ -4,10 +4,13 @@ Generate boilerplate code for a new urfave/cli/v3 project.
 
 ## Features
 
-- Generates a new urfave/cli/v3 project
+- Generates a Go 1.27 urfave/cli/v3 project
 - Logging with Zerolog
-- Stub out commands based on user input
-- Commit, and date injection
+- Generates commands from user input
+- Optional file logging, YAML config, JSON output, profiling, and Docker integration tests
+- XDG config, data, and cache paths
+- Shell completion support
+- Commit and date injection
 - GoReleaser configuration
   - Multi architecture docker builds
   - Homebrew Tap publishing

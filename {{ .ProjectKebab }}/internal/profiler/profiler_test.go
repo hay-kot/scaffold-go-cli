@@ -1,4 +1,4 @@
-{{- if .Computed.feature_profiling }}
+{{- if .Computed.feature_profiling -}}
 package profiler
 
 import (
@@ -11,9 +11,14 @@ import (
 )
 
 func TestProfilerHTTPServer(t *testing.T) {
-	profiler := New(Options{HTTPAddr: "127.0.0.1:0"})
+	profiler := New(Options{
+		HTTPAddr:    "127.0.0.1:0",
+		CPUProfile:  "",
+		HeapProfile: "",
+	})
+	ctx := context.Background()
 
-	if err := profiler.Start(context.Background()); err != nil {
+	if err := profiler.Start(ctx); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
 
@@ -25,7 +30,11 @@ func TestProfilerHTTPServer(t *testing.T) {
 		}
 	}()
 
-	resp, err := http.Get("http://" + profiler.Addr() + "/debug/pprof/")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+profiler.Addr()+"/debug/pprof/", nil)
+	if err != nil {
+		t.Fatalf("create pprof index request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET pprof index error = %v", err)
 	}
@@ -46,6 +55,7 @@ func TestProfilerWritesProfiles(t *testing.T) {
 	heapProfile := filepath.Join(tmpDir, "heap.pprof")
 
 	profiler := New(Options{
+		HTTPAddr:    "",
 		CPUProfile:  cpuProfile,
 		HeapProfile: heapProfile,
 	})
@@ -54,7 +64,7 @@ func TestProfilerWritesProfiles(t *testing.T) {
 		t.Fatalf("Start() error = %v", err)
 	}
 
-	for i := 0; i < 100000; i++ {
+	for i := range 100000 {
 		_ = i * i
 	}
 
